@@ -1,0 +1,46 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "description": "Insert the base URL for your custom components (eg. https://custom.example.com/repo)",
+                "data": {
+                    "base_url": "Repository base URL"
+                }
+            }
+        },
+        "error": {
+            "invalid_repository": "The repository does not have valid data",
+            "invalid_url": "The passed URL is invalid"
+        },
+        "abort": {
+            "already_configured": "This repository is already configured"
+        }
+    },
+    "entity": {
+        "update": {
+            "component_update": {
+                "name": "Component upgrade"
+            }
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Options for {name} repository",
+                "data": {
+                    "polling_time": "Polling hours"
+                }
+            }
+        }
+    },
+    "issues": {
+        "restart_required": {
+            "title": "Restart required",
+            "description": "The **{component}** component was successfully updated to version {installed_version}, but a Home Assistant restart is required."
+        },
+        "update_failed": {
+            "title": "{component} update failed",
+            "description": "The **{component}** component was not updated successfully.\nThe installed version is {installed_version} instead of {desidered_version}.\n\nPlease check the integration folder before proceeding with the restart.\nYou can find the integration file at the link under \"more information\"."
+        }
+    }
+}

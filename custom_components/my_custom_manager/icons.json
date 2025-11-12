@@ -1,0 +1,10 @@
+{
+    "services": {
+        "download_custom": {
+            "service": "mdi:download-circle-outline"
+        },
+        "download_list": {
+            "service": "mdi:view-list-outline"
+        }
+    }
+}

@@ -1,0 +1,13 @@
+{
+  "domain": "my_custom_manager",
+  "name": "My custom component version manager",
+  "codeowners": [
+    "@francesco"
+  ],
+  "config_flow": true,
+  "documentation": "https://git.villavasco.ovh/home-assistant/my-custom-manager/",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://git.villavasco.ovh/home-assistant/my-custom-manager/issues",
+  "requirements": [],
+  "version": "0.0.0"
+}
