@@ -4,7 +4,7 @@ from logging import Logger, getLogger
 
 from homeassistant.const import Platform
 
-VERSION = "0.0.0"
+VERSION = "1.0.0"
 LOGGER: Logger = getLogger(__package__)
 
 DOMAIN = "my_custom_manager"
