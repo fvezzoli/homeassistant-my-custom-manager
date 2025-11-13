@@ -6,6 +6,10 @@
                 "data": {
                     "base_url": "URL repository"
                 }
+            },
+            "welcome": {
+                "title": "Repository \"{name}\"",
+                "description": "Confermi la creazione del repository \"**{name}**\", con descrizione\n```{description}```\n\nCon questi custom component:\n{list}"
             }
         },
         "error": {
