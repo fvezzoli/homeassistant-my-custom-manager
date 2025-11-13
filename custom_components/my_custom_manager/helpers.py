@@ -57,21 +57,21 @@ CUSTOM_VERSION_SCHEMA = vol.Schema(
         vol.Optional(KEY_STABLE, default=True): vol.Boolean,
         vol.Required(KEY_HA_MIN_VERSION): awesome_version_validator,
         vol.Optional(KEY_HA_MAX_VERSION): awesome_version_validator,
-        vol.Required(KEY_RELEASE_FILE): vol.Url,
-        vol.Optional(KEY_HOMEPAGE): vol.Url,
+        vol.Required(KEY_RELEASE_FILE): vol.Url(),
+        vol.Optional(KEY_HOMEPAGE): vol.Url(),
     },
     extra=False,
 )
-CUSTOM_VERSIONS_SCHEMA = vol.Schema(
+CUSTOM_VERSIONS_LIST_SCHEMA = vol.Schema(
     {awesome_version_validator: CUSTOM_VERSION_SCHEMA}, extra=False
 )
 CUSTOM_SCHEMA = vol.Schema(
     {
         vol.Required(KEY_NAME): str,
         vol.Optional(KEY_DESCRIPTION): str,
-        vol.Optional(KEY_HOMEPAGE): vol.Url,
-        vol.Optional(KEY_CHANGELOG): vol.Url,
-        vol.Required(KEY_VERSIONS): CUSTOM_VERSION_SCHEMA,
+        vol.Optional(KEY_HOMEPAGE): vol.Url(),
+        vol.Optional(KEY_CHANGELOG): vol.Url(),
+        vol.Required(KEY_VERSIONS): CUSTOM_VERSIONS_LIST_SCHEMA,
     },
     extra=False,
 )
@@ -81,7 +81,7 @@ REPOSITORY_SCHEMA = vol.Schema(
     {
         vol.Required(KEY_NAME): str,
         vol.Optional(KEY_DESCRIPTION): str,
-        vol.Optional(KEY_HOMEPAGE): vol.Url,
+        vol.Optional(KEY_HOMEPAGE): vol.Url(),
         vol.Required(KEY_CUSTOMS): REPOSITORY_CUSTOM_SCHEMA,
     },
     extra=False,
@@ -103,13 +103,13 @@ async def async_fetch_repository_data(hass: HomeAssistant, base_url: str) -> dic
                 LOGGER.warning(msg)
                 raise ConnectionError(msg)
 
-            data = await resp.json()
             try:
+                data = await resp.json()
                 return REPOSITORY_SCHEMA(data)
-            except vol.Invalid:
+            except (vol.Invalid, json.JSONDecodeError) as err:
                 msg = "Invalid repository description found"
                 LOGGER.exception(msg)
-                raise ValueError(msg) from None
+                raise ValueError(msg) from err
 
     except ClientError as err:
         msg = "Catch error in HTTP request"
@@ -134,16 +134,16 @@ async def async_fetch_custom_description(
                 LOGGER.warning(msg)
                 raise ConnectionError(msg)
 
-            data = await resp.json()
             try:
+                data = await resp.json()
                 return CUSTOM_SCHEMA(data)
-            except vol.Invalid as err:
+            except (vol.Invalid, json.JSONDecodeError) as err:
                 msg = f"Invalid custom {component} description found"
                 LOGGER.exception(msg)
                 raise ValueError(msg) from err
 
     except ClientError:
-        msg = "Catch error in HTTP request"
+        msg = f"Catch error in HTTP request for {component}"
         LOGGER.exception(msg)
         raise ConnectionError(msg) from None
 
@@ -220,32 +220,32 @@ async def async_download_and_install(
         LOGGER.exception(msg)
         raise
 
-    version = version or custom_data.get(KEY_LATEST)
+    version = (
+        version
+        or str(max(AwesomeVersion(v) for v in custom_data[KEY_VERSIONS]))
+        or None
+    )
     if version is None or version not in custom_data[KEY_VERSIONS]:
-        msg = f"Version {version} of {component} is not present on repository"
+        msg = "No valid version {version} for {component} requested"
         LOGGER.error(msg)
         raise ValueError(msg)
-
-    zip_url: str = custom_data[KEY_VERSIONS].get(
-        KEY_ZIP_FILE, f"{base_url}/{component}/{version}.zip"
-    )
 
     session = async_get_clientsession(hass)
     try:
         async with (
             session.get(
-                zip_url,
+                custom_data[KEY_VERSIONS][version][KEY_RELEASE_FILE],
                 timeout=aiohttp.ClientTimeout(total=10),
             ) as resp,
         ):
             if resp.status != HTTPStatus.OK:
-                msg = f"{component} ZIP for {version} download failed: {resp.status}"
+                msg = f"Download release file for {component}@{version} : {resp.status}"
                 LOGGER.warning(msg)
                 raise ConnectionError(msg)
             data = await resp.read()
 
     except ClientError:
-        msg = "Catch error in {component} ZIP for {version} download"
+        msg = f"Catch error in release file for {component}@{version} download"
         LOGGER.exception(msg)
         raise ConnectionError(msg) from None
 

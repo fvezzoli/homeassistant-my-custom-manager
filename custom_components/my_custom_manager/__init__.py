@@ -104,17 +104,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     base_url = entry.data[CONF_BASE_URL]
     entry_runtime_data = RuntimeEntryData(entry_id=entry.entry_id)
 
-    LOGGER.debug("Check repository descriptions for: %s", base_url)
+    LOGGER.debug("Check repository descriptions for: %s", entry.title)
 
     try:
         repo_desc = await async_fetch_repository_data(hass, base_url)
     except (ConnectionError, ValueError) as err:
         msg = f"Error in the '{entry.title}' data fetch"
         raise ConfigEntryNotReady(msg) from err
+    entry_runtime_data.customs_list = list(repo_desc.get(KEY_CUSTOMS, {}).keys())
 
     domain_data = DomainData.get(hass)
     domain_data.set_entry_data(entry, entry_runtime_data)
-    domain_data.custom_list = repo_desc[KEY_CUSTOMS]
 
     entry_runtime_data.update_unlistener = entry.add_update_listener(update_listener)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

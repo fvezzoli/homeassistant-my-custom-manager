@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -15,3 +15,4 @@ class RuntimeEntryData:
 
     entry_id: str
     update_unlistener: CALLBACK_TYPE | None = None
+    customs_list: list[str] = field(default_factory=list)
