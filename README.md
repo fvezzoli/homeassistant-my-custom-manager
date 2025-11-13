@@ -64,6 +64,78 @@ Fields:
 | component    | Name of the component to download     | ✅       |
 | version      | Version to install                    | ❌       |
 
+## 🪣 Repository
+
+This repository stores metadata for multiple integration projects.
+It contains a global repository index and one folder for each project.
+
+### 📁 Repository Structure
+
+```
+├── repository.json
+└── customs
+    ├── my_custom_manager
+    |   ├── custom.json
+    |   └── 1.0.0.zip
+    ├── another_custom
+    |   └── custom.json
+```
+
+### 📄 repository.json
+
+This file contains:
+
+- **name**: name of the repository project
+- **description**: a longest description
+- **homepage**: the home-page of the repository
+- **customs**: the list of hosted custom components, with custom domain as key and name
+
+Example:
+```json
+{
+  "name": "Fantastic customs",
+  "description": "Collection of awesome secret integrations and components",
+  "customs": {
+    "my_custom_manager": "My Custom Component Version Manager",
+    "another_custom": "Another custom project"
+  }
+}
+```
+
+### 📄 custom.json (inside each project folder)
+
+This file is inside a folder with name same of projects key. Contains all metadata specific to a project:
+- **name**: of the project
+- **description**: a longest project description
+- **homepage**: the home-page of the project
+- **changelog**: the URL of project changelod in MarkDown format
+- **versions**: dictionary with list of all available versions.
+
+Each version uses the version number as its key, and contains all information to describe the version:
+- **stable**: true if version is a stable version
+- **ha_min**: the minimum version of Home Assistant
+- **ha_max**: (optional) the latest version compatible with this custom version
+- **release_file**: url for custom download. The file is a zip file with this structure inide `custom_component/<custom_name>/*`.
+- **homepage**: (optional) url for version release page, usefull for present the release
+
+Example:
+```json
+{
+  "name": "My Custom Component Version Manager",
+  "description": "Custom component inspired to HACS to manage some personal customs not published on github.",
+  "homepage": "https://git.villavasco.ovh/home-assistant/my_custom_manager/",
+  "changelog": "https://git.villavasco.ovh/home-assistant/my-custom-manager/raw/branch/main/CHANGELOG.md",
+  "versions": {
+    "1.0.0": {
+      "stable": true,
+      "ha_min": "2025.11.0",
+      "release_file": "https://git.villavasco.ovh/home-assistant/my-custom-manager/releases/download/v1.0.0/my-custom-manager.zip",
+      "homepage": "https://git.villavasco.ovh/home-assistant/my-custom-manager/releases/tag/v1.0.0"
+    }
+  }
+}
+```
+
 ## 🤝 Contributing
 
 Contributions are always welcome!
