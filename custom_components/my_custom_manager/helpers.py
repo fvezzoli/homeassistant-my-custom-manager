@@ -20,29 +20,25 @@ from homeassistant.helpers.issue_registry import (
     async_create_issue,
 )
 
-from .const import CHANGELOG_FILE, JSON_CUSTOM, JSON_REPO_DESC, LOGGER, MANIFEST_VERSION
+from .const import JSON_CUSTOM, JSON_REPO_DESC, LOGGER, MANIFEST_VERSION
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
 
 _REQUEST_TIMEOUT = 5.0
 
-KEY_DESC = "description"
+KEY_CHANGELOG = "changelog"
 KEY_CUSTOMS = "customs"
-KEY_LATEST = "latest"
+KEY_DESCRIPTION = "description"
+KEY_HA_MIN_VERSION = "ha_min"
+KEY_HA_MAX_VERSION = "ha_max"
+KEY_HOMEPAGE = "homepage"
+KEY_NAME = "name"
+KEY_STABLE = "stable"
+KEY_RELEASE_FILE = "release_file"
 KEY_VERSIONS = "versions"
-KEY_HA_MIN_VERSION = "min_ha"
-KEY_HA_MAX_VERSION = "max_ha"
-KEY_ZIP_FILE = "release_file"
 
-REPO_CUSTOMS_LIST = vol.Schema({str: str})
-
-REPO_DESC_VALIDATOR = vol.Schema(
-    {
-        vol.Required(KEY_DESC): str,
-        vol.Required(KEY_CUSTOMS): REPO_CUSTOMS_LIST,
-    }
-)
+## Repository schemas
 
 
 def awesome_version_validator(value: str) -> str:
@@ -56,22 +52,39 @@ def awesome_version_validator(value: str) -> str:
     return value
 
 
-CUSTOM_VERSION = vol.Schema(
+CUSTOM_VERSION_SCHEMA = vol.Schema(
     {
+        vol.Optional(KEY_STABLE, default=True): vol.Boolean,
         vol.Required(KEY_HA_MIN_VERSION): awesome_version_validator,
         vol.Optional(KEY_HA_MAX_VERSION): awesome_version_validator,
-        vol.Optional(KEY_ZIP_FILE): vol.Url,
+        vol.Required(KEY_RELEASE_FILE): vol.Url,
+        vol.Optional(KEY_HOMEPAGE): vol.Url,
     },
+    extra=False,
+)
+CUSTOM_VERSIONS_SCHEMA = vol.Schema(
+    {awesome_version_validator: CUSTOM_VERSION_SCHEMA}, extra=False
+)
+CUSTOM_SCHEMA = vol.Schema(
+    {
+        vol.Required(KEY_NAME): str,
+        vol.Optional(KEY_DESCRIPTION): str,
+        vol.Optional(KEY_HOMEPAGE): vol.Url,
+        vol.Optional(KEY_CHANGELOG): vol.Url,
+        vol.Required(KEY_VERSIONS): CUSTOM_VERSION_SCHEMA,
+    },
+    extra=False,
 )
 
-CUSTOM_LIST_VERSIONS = vol.Schema({awesome_version_validator: CUSTOM_VERSION})
-
-CUSTOM_DESC_VALIDATOR = vol.Schema(
+REPOSITORY_CUSTOM_SCHEMA = vol.Schema({str: str}, extra=False)
+REPOSITORY_SCHEMA = vol.Schema(
     {
-        vol.Required(KEY_DESC): str,
-        vol.Required(KEY_LATEST): awesome_version_validator,
-        vol.Required(KEY_VERSIONS): CUSTOM_LIST_VERSIONS,
-    }
+        vol.Required(KEY_NAME): str,
+        vol.Optional(KEY_DESCRIPTION): str,
+        vol.Optional(KEY_HOMEPAGE): vol.Url,
+        vol.Required(KEY_CUSTOMS): REPOSITORY_CUSTOM_SCHEMA,
+    },
+    extra=False,
 )
 
 
@@ -92,7 +105,7 @@ async def async_fetch_repository_data(hass: HomeAssistant, base_url: str) -> dic
 
             data = await resp.json()
             try:
-                return REPO_DESC_VALIDATOR(data)
+                return REPOSITORY_SCHEMA(data)
             except vol.Invalid:
                 msg = "Invalid repository description found"
                 LOGGER.exception(msg)
@@ -123,7 +136,7 @@ async def async_fetch_custom_description(
 
             data = await resp.json()
             try:
-                return CUSTOM_DESC_VALIDATOR(data)
+                return CUSTOM_SCHEMA(data)
             except vol.Invalid as err:
                 msg = f"Invalid custom {component} description found"
                 LOGGER.exception(msg)
