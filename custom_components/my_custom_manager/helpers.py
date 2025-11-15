@@ -14,6 +14,7 @@ import aiohttp
 import voluptuous as vol
 from aiohttp.client_exceptions import ClientError
 from awesomeversion import AwesomeVersion, AwesomeVersionException
+from homeassistant.const import __version__ as ha_version
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.issue_registry import (
     IssueSeverity,
@@ -34,7 +35,6 @@ KEY_HA_MIN_VERSION = "ha_min"
 KEY_HA_MAX_VERSION = "ha_max"
 KEY_HOMEPAGE = "homepage"
 KEY_NAME = "name"
-KEY_STABLE = "stable"
 KEY_RELEASE_FILE = "release_file"
 KEY_VERSIONS = "versions"
 
@@ -54,11 +54,10 @@ def awesome_version_validator(value: str) -> str:
 
 CUSTOM_VERSION_SCHEMA = vol.Schema(
     {
-        vol.Optional(KEY_STABLE, default=True): vol.Boolean,
         vol.Required(KEY_HA_MIN_VERSION): awesome_version_validator,
         vol.Optional(KEY_HA_MAX_VERSION): awesome_version_validator,
-        vol.Required(KEY_RELEASE_FILE): vol.Url(),
-        vol.Optional(KEY_HOMEPAGE): vol.Url(),
+        vol.Required(KEY_RELEASE_FILE): vol.Url(),  # pyright: ignore[reportCallIssue]
+        vol.Optional(KEY_HOMEPAGE): vol.Url(),  # pyright: ignore[reportCallIssue]
     },
     extra=False,
 )
@@ -69,8 +68,8 @@ CUSTOM_SCHEMA = vol.Schema(
     {
         vol.Required(KEY_NAME): str,
         vol.Optional(KEY_DESCRIPTION): str,
-        vol.Optional(KEY_HOMEPAGE): vol.Url(),
-        vol.Optional(KEY_CHANGELOG): vol.Url(),
+        vol.Optional(KEY_HOMEPAGE): vol.Url(),  # pyright: ignore[reportCallIssue]
+        vol.Optional(KEY_CHANGELOG): vol.Url(),  # pyright: ignore[reportCallIssue]
         vol.Required(KEY_VERSIONS): CUSTOM_VERSIONS_LIST_SCHEMA,
     },
     extra=False,
@@ -81,11 +80,37 @@ REPOSITORY_SCHEMA = vol.Schema(
     {
         vol.Required(KEY_NAME): str,
         vol.Optional(KEY_DESCRIPTION): str,
-        vol.Optional(KEY_HOMEPAGE): vol.Url(),
+        vol.Optional(KEY_HOMEPAGE): vol.Url(),  # pyright: ignore[reportCallIssue]
         vol.Required(KEY_CUSTOMS): REPOSITORY_CUSTOM_SCHEMA,
     },
     extra=False,
 )
+
+
+def is_stable_version(version: AwesomeVersion) -> bool:
+    """Return if version is not stable."""
+    return not (
+        version.alpha or version.beta or version.dev or version.release_candidate
+    )
+
+
+def get_supported_versions(
+    custom_data: dict, *, only_stable: bool = True
+) -> list[AwesomeVersion]:
+    """Return the latest available version."""
+    return [
+        AwesomeVersion(v)
+        for v, data in custom_data[KEY_VERSIONS].items()
+        # Filter unstable versions
+        if (is_stable_version(AwesomeVersion(v)) or not only_stable)
+        and ha_version >= data[KEY_HA_MIN_VERSION]
+        and ha_version <= data.get(KEY_HA_MAX_VERSION, ha_version)
+    ]
+
+
+def get_latest_version(custom_data: dict, *, only_stable: bool = True) -> str:
+    """Return the latest available version."""
+    return str(max(get_supported_versions(custom_data, only_stable=only_stable)))
 
 
 async def async_fetch_repository_data(hass: HomeAssistant, base_url: str) -> dict:
@@ -148,20 +173,18 @@ async def async_fetch_custom_description(
         raise ConnectionError(msg) from None
 
 
-async def async_fetch_custom_changelog(
-    hass: HomeAssistant, base_url: str, component: str
-) -> str:
+async def async_fetch_page(hass: HomeAssistant, url: str) -> str:
     """Download the different custom version available."""
     session = async_get_clientsession(hass)
     try:
         async with (
             session.get(
-                f"{base_url}/{component}/{CHANGELOG_FILE}",
+                url,
                 timeout=aiohttp.ClientTimeout(total=_REQUEST_TIMEOUT),
             ) as resp,
         ):
             if resp.status != HTTPStatus.OK:
-                msg = f"Changelog for {component} request error: {resp.status}"
+                msg = f"Page request error: {resp.status}"
                 LOGGER.warning(msg)
                 raise ConnectionError(msg)
 
@@ -197,10 +220,15 @@ async def async_get_local_custom_manifest(
 
 
 async def async_download_and_install(
-    hass: HomeAssistant, base_url: str, component: str, version: None | str
+    hass: HomeAssistant,
+    base_url: str,
+    component: str,
+    version: None | str = "",
+    *,
+    only_stable: bool = True,
 ) -> None | str:
     """Download and install custom component from remote repository."""
-    LOGGER.debug("Try to download custom '%s'", component)
+    LOGGER.debug("Try to download custom '%s'@'%s'", component, version or "latest")
 
     try:
         repo_data = await async_fetch_repository_data(hass, base_url)
@@ -221,9 +249,7 @@ async def async_download_and_install(
         raise
 
     version = (
-        version
-        or str(max(AwesomeVersion(v) for v in custom_data[KEY_VERSIONS]))
-        or None
+        version or get_latest_version(custom_data, only_stable=only_stable) or None
     )
     if version is None or version not in custom_data[KEY_VERSIONS]:
         msg = "No valid version {version} for {component} requested"
@@ -269,11 +295,15 @@ async def async_download_and_install(
             shutil.rmtree(extract_path)
 
     await hass.async_add_executor_job(extract_data)
-    return await check_version_installed(hass, component, version, zip_url)
+
+    learn_more_url = custom_data[KEY_VERSIONS][version].get(
+        KEY_HOMEPAGE
+    ) or custom_data[KEY_VERSIONS][version].get(KEY_RELEASE_FILE)
+    return await check_version_installed(hass, component, version, learn_more_url)
 
 
 async def check_version_installed(
-    hass: HomeAssistant, component: str, version: str, zip_url: str
+    hass: HomeAssistant, component: str, version: str, learn_more_url: str
 ) -> None | str:
     """Check the installed version and raise repair."""
     component_manifest = await async_get_local_custom_manifest(hass, component) or {}
@@ -305,7 +335,7 @@ async def check_version_installed(
             is_fixable=False,
             severity=IssueSeverity.ERROR,
             translation_key="update_failed",
-            learn_more_url=zip_url,
+            learn_more_url=learn_more_url,
             translation_placeholders=translation_placeholders,
         )
 

@@ -112,7 +112,6 @@ This file is inside a folder with name same of projects key. Contains all metada
 - **versions**: dictionary with list of all available versions.
 
 Each version uses the version number as its key, and contains all information to describe the version:
-- **stable**: true if version is a stable version
 - **ha_min**: the minimum version of Home Assistant
 - **ha_max**: (optional) the latest version compatible with this custom version
 - **release_file**: url for custom download. The file is a zip file with this structure inide `custom_component/<custom_name>/*`.
@@ -127,7 +126,6 @@ Example:
   "changelog": "https://git.villavasco.ovh/home-assistant/my-custom-manager/raw/branch/main/CHANGELOG.md",
   "versions": {
     "1.0.0": {
-      "stable": true,
       "ha_min": "2025.11.0",
       "release_file": "https://git.villavasco.ovh/home-assistant/my-custom-manager/releases/download/v1.0.0/my-custom-manager.zip",
       "homepage": "https://git.villavasco.ovh/home-assistant/my-custom-manager/releases/tag/v1.0.0"
