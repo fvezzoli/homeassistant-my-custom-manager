@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+- ✨ Supported version list service
+- ✨ Add unstable version show option
+- ❌ Removed latest version key from repository
+- 📝 Align documentation
+- 🧠 Services refactory
+- 🧠 Update entity refactory
 
 ## [2.0.0] - 2025-11-17
 
