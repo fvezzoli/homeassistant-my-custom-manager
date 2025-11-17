@@ -79,7 +79,7 @@ async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
                 custom_integration,
                 custom_version,
             )
-        except Exception as err:
+        except (ConnectionError, ValueError) as err:
             raise HomeAssistantError(str(err)) from err
 
     hass.services.async_register(
