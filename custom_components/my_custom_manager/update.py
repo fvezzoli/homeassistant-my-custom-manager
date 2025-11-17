@@ -110,9 +110,10 @@ class EntityUpdateCoordinator(DataUpdateCoordinator):
             custom_repo_data = await async_fetch_custom_description(
                 self.hass, self._entry.data[CONF_BASE_URL], self._custom_integration
             )
-        except (ConnectionError, ValueError) as err:
+        except (ConnectionError, ValueError):
             msg = "Error in data fetch"
-            raise UpdateFailed(msg) from err
+            LOGGER.exception(msg)
+            raise UpdateFailed(msg) from None
 
         self._changelog_url = custom_repo_data.get(REPO_KEY_CHANGELOG, None)
 
