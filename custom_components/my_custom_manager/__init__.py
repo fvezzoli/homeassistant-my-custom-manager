@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, cast
 
 from homeassistant.core import ServiceResponse, SupportsResponse
-from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError
 
 from .const import (
     CONF_BASE_URL,
@@ -21,6 +21,10 @@ from .const import (
     SERVICE_DOWNLOAD_CUSTOM,
     SERVICE_GET_CUSTOM_LIST,
     SERVICE_GET_SUPPORTED_VERSIONS,
+    SERVICE_KEY_CONFIG_ENTRY,
+    SERVICE_KEY_CUSTOM_COMPONENT,
+    SERVICE_KEY_ONLY_STABLE,
+    SERVICE_KEY_VERSION,
 )
 from .domain_data import DomainData
 from .entry_data import RuntimeEntryData
@@ -50,9 +54,23 @@ async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
         await async_get_local_custom_manifest(hass, DOMAIN) or {}
     ).get(CUSTOM_MANIFEST_VERSION, "")
 
+    def get_entry_data_from_id(config_entry_id: str) -> ConfigEntry:
+        """Return the config entry data from id."""
+        config_data = hass.config_entries.async_get_entry(config_entry_id)
+        if not config_data:
+            msg = f"{config_entry_id} entry does not exist"
+            raise HomeAssistantError(msg)
+        return config_data
+
     async def handle_customs_list(call: ServiceCall) -> ServiceResponse:
         """Download the repository customs list."""
-        return cast("ServiceResponse", await handle_service_customs_list(hass, call))
+        config_entry_id = call.data[SERVICE_KEY_CONFIG_ENTRY]
+        return cast(
+            "ServiceResponse",
+            await handle_service_customs_list(
+                hass, get_entry_data_from_id(config_entry_id)
+            ),
+        )
 
     hass.services.async_register(
         DOMAIN,
@@ -64,8 +82,17 @@ async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
 
     async def handle_supported_versions(call: ServiceCall) -> ServiceResponse:
         """Download and return all the available versions."""
+        config_entry_id = call.data[SERVICE_KEY_CONFIG_ENTRY]
+        custom_integration = call.data[SERVICE_KEY_CUSTOM_COMPONENT]
+        only_stable = call.data.get(SERVICE_KEY_ONLY_STABLE, True)
         return cast(
-            "ServiceResponse", await handle_service_supported_versions(hass, call)
+            "ServiceResponse",
+            await handle_service_supported_versions(
+                hass,
+                get_entry_data_from_id(config_entry_id),
+                custom_integration,
+                only_stable=only_stable,
+            ),
         )
 
     hass.services.async_register(
@@ -78,7 +105,18 @@ async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
 
     async def handle_custom_download(call: ServiceCall) -> ServiceResponse:
         """Manage the custom version download."""
-        return cast("ServiceResponse", await handle_service_custom_download(hass, call))
+        config_entry_id = call.data[SERVICE_KEY_CONFIG_ENTRY]
+        custom_integration = call.data[SERVICE_KEY_CUSTOM_COMPONENT]
+        custom_version = call.data.get(SERVICE_KEY_VERSION, None)
+        return cast(
+            "ServiceResponse",
+            await handle_service_custom_download(
+                hass,
+                get_entry_data_from_id(config_entry_id),
+                custom_integration,
+                custom_version,
+            ),
+        )
 
     hass.services.async_register(
         DOMAIN,
