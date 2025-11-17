@@ -32,7 +32,8 @@
             "init": {
                 "title": "Opzioni per il repository {name}",
                 "data": {
-                    "polling_time": "Ore tra i diversi aggiornamenti"
+                    "polling_time": "Ore tra i diversi aggiornamenti",
+                    "show_unstable": "Usa le versioni non stabili negli aggiornamenti (alpha, beta, rc)"
                 }
             }
         }

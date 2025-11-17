@@ -5,6 +5,7 @@ from __future__ import annotations
 from hashlib import sha1
 from typing import TYPE_CHECKING, Any
 
+import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from homeassistant.config_entries import (
     CONN_CLASS_CLOUD_POLL,
@@ -22,7 +23,9 @@ from homeassistant.helpers.selector import (
 from .const import (
     CONF_BASE_URL,
     CONF_POLL_TIME,
+    CONF_SHOW_UNSTABLE,
     DEFAULT_POLLING_HOURS,
+    DEFAULT_SHOW_UNSTABLE,
     DOMAIN,
 )
 from .helpers import (
@@ -40,7 +43,7 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
     """Config flow for my custom manager."""
 
     VERSION = 1
-    MINOR_VERSION = 0
+    MINOR_VERSION = 1
     CONNECTION_CLASS = CONN_CLASS_CLOUD_POLL
 
     _repo_name: str = "My custom repository"
@@ -105,7 +108,10 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
             return self.async_create_entry(
                 title=self._repo_name,
                 data=self._data,
-                options={CONF_POLL_TIME: DEFAULT_POLLING_HOURS},
+                options={
+                    CONF_POLL_TIME: DEFAULT_POLLING_HOURS,
+                    CONF_SHOW_UNSTABLE: DEFAULT_SHOW_UNSTABLE,
+                },
             )
 
         return self._show_step_user_flow({})
@@ -133,29 +139,30 @@ class OptionsFlowHandler(OptionsFlow):
         self, user_data: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Init options manage steps."""
-        actual_polling = self.config_entry.options.get(
-            CONF_POLL_TIME, DEFAULT_POLLING_HOURS
-        )
         if user_data:
-            polling_time = user_data[CONF_POLL_TIME]
-
-            if actual_polling != polling_time:
-                new_options = {CONF_POLL_TIME: polling_time}
-                self.hass.config_entries.async_update_entry(
-                    self.config_entry, options=new_options
-                )
-                return self.async_create_entry(title="", data=new_options)
+            self.hass.config_entries.async_update_entry(
+                self.config_entry, options=user_data
+            )
+            return self.async_create_entry(title="", data=user_data)
 
         data_schema = vol.Schema(
             {
                 vol.Required(
                     CONF_POLL_TIME,
-                    default=actual_polling,
+                    default=self.config_entry.options.get(
+                        CONF_POLL_TIME, DEFAULT_POLLING_HOURS
+                    ),
                 ): NumberSelector(
                     NumberSelectorConfig(
                         min=3, max=24, step=1, mode=NumberSelectorMode.BOX
                     )
                 ),
+                vol.Required(
+                    CONF_SHOW_UNSTABLE,
+                    default=self.config_entry.options.get(
+                        CONF_SHOW_UNSTABLE, DEFAULT_SHOW_UNSTABLE
+                    ),
+                ): cv.boolean,
             }
         )
 

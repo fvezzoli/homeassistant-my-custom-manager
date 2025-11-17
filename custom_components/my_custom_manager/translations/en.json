@@ -32,7 +32,8 @@
             "init": {
                 "title": "Options for {name} repository",
                 "data": {
-                    "polling_time": "Polling hours"
+                    "polling_time": "Polling hours",
+                    "show_unstable": "Use unstable versions in update (alpha, beta, rc)"
                 }
             }
         }

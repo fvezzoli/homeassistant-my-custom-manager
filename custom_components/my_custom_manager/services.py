@@ -17,7 +17,7 @@ from .const import (
     SERVICE_KEY_CONFIG_ENTRY,
     SERVICE_KEY_CUSTOM_COMPONENT,
     SERVICE_KEY_INSTALLED_VERSION,
-    SERVICE_KEY_ONLY_STABLE,
+    SERVICE_KEY_SHOW_UNSTABLE,
     SERVICE_KEY_SUPPORTED_VERSIONS,
     SERVICE_KEY_VERSION,
 )
@@ -43,7 +43,7 @@ SERVICE_GET_SUPPORTED_VERSIONS_SCHEMA = vol.Schema(
     {
         vol.Required(SERVICE_KEY_CONFIG_ENTRY): cv.string,
         vol.Required(SERVICE_KEY_CUSTOM_COMPONENT): cv.string,
-        vol.Optional(SERVICE_KEY_ONLY_STABLE): cv.boolean,
+        vol.Optional(SERVICE_KEY_SHOW_UNSTABLE): cv.boolean,
     }
 )
 
@@ -76,7 +76,7 @@ async def handle_service_supported_versions(
     config_data: ConfigEntry,
     custom_integration: str,
     *,
-    only_stable: bool,
+    show_unstable: bool,
 ) -> dict[str, list[str]]:
     """Download and return all the available versions."""
     customs_list = await handle_service_customs_list(hass, config_data)
@@ -94,7 +94,8 @@ async def handle_service_supported_versions(
 
     return {
         SERVICE_KEY_SUPPORTED_VERSIONS: [
-            str(v) for v in get_supported_versions(custom_data, only_stable=only_stable)
+            str(v)
+            for v in get_supported_versions(custom_data, show_unstable=show_unstable)
         ]
     }
 
@@ -114,7 +115,7 @@ async def handle_service_custom_download(
         msg = "Error in {custom_integration} data fetch"
         raise HomeAssistantError(msg) from err
 
-    available_versions = get_supported_versions(custom_data, only_stable=False)
+    available_versions = get_supported_versions(custom_data, show_unstable=False)
     try:
         latest_version = max(available_versions)
     except ValueError:

@@ -14,7 +14,9 @@ from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError
 
 from .const import (
     CONF_BASE_URL,
+    CONF_SHOW_UNSTABLE,
     CUSTOM_MANIFEST_VERSION,
+    DEFAULT_SHOW_UNSTABLE,
     DOMAIN,
     LOGGER,
     PLATFORMS,
@@ -23,7 +25,7 @@ from .const import (
     SERVICE_GET_SUPPORTED_VERSIONS,
     SERVICE_KEY_CONFIG_ENTRY,
     SERVICE_KEY_CUSTOM_COMPONENT,
-    SERVICE_KEY_ONLY_STABLE,
+    SERVICE_KEY_SHOW_UNSTABLE,
     SERVICE_KEY_VERSION,
 )
 from .domain_data import DomainData
@@ -84,14 +86,14 @@ async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
         """Download and return all the available versions."""
         config_entry_id = call.data[SERVICE_KEY_CONFIG_ENTRY]
         custom_integration = call.data[SERVICE_KEY_CUSTOM_COMPONENT]
-        only_stable = call.data.get(SERVICE_KEY_ONLY_STABLE, True)
+        show_unstable = call.data.get(SERVICE_KEY_SHOW_UNSTABLE, DEFAULT_SHOW_UNSTABLE)
         return cast(
             "ServiceResponse",
             await handle_service_supported_versions(
                 hass,
                 get_entry_data_from_id(config_entry_id),
                 custom_integration,
-                only_stable=only_stable,
+                show_unstable=show_unstable,
             ),
         )
 
@@ -175,3 +177,46 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.services.async_remove(DOMAIN, SERVICE_DOWNLOAD_CUSTOM)
 
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+
+async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+    """Migrate entry."""
+    migrated = False
+    version = config_entry.version
+    minor_version = config_entry.minor_version
+
+    data = {**config_entry.data}
+    options = {**config_entry.options}
+
+    if version > 1:
+        LOGGER.error("Unknown version %s. You try to downgrade?", version)
+        return False
+
+    if version == 1:
+        if minor_version > 1:
+            LOGGER.error(
+                "Unknown version %s.%s. You try to downgrade?", version, minor_version
+            )
+            return False
+
+        if minor_version == 0:
+            migrated = True
+            LOGGER.debug("Add show unstable to the entry option (1.1)")
+            options[CONF_SHOW_UNSTABLE] = DEFAULT_SHOW_UNSTABLE
+            minor_version = 1
+
+    if migrated:
+        hass.config_entries.async_update_entry(
+            config_entry,
+            data=data,
+            options=options,
+            version=version,
+            minor_version=minor_version,
+        )
+        LOGGER.debug(
+            "Config entry migrated successful to version %s.%s",
+            version,
+            minor_version,
+        )
+
+    return True

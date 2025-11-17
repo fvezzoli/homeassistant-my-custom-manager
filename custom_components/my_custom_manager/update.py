@@ -19,9 +19,11 @@ from homeassistant.helpers.update_coordinator import (
 from .const import (
     CONF_BASE_URL,
     CONF_POLL_TIME,
+    CONF_SHOW_UNSTABLE,
     CUSTOM_MANIFEST_NAME,
     CUSTOM_MANIFEST_VERSION,
     DEFAULT_POLLING_HOURS,
+    DEFAULT_SHOW_UNSTABLE,
     DOMAIN,
     LOGGER,
     SERVICE_KEY_INSTALLED_VERSION,
@@ -114,7 +116,12 @@ class EntityUpdateCoordinator(DataUpdateCoordinator):
 
         self._changelog_url = custom_repo_data.get(REPO_KEY_CHANGELOG, None)
 
-        supported_versions = get_supported_versions(custom_repo_data, only_stable=True)
+        supported_versions = get_supported_versions(
+            custom_repo_data,
+            show_unstable=self._entry.options.get(
+                CONF_SHOW_UNSTABLE, DEFAULT_SHOW_UNSTABLE
+            ),
+        )
         return str(max(supported_versions))
 
     @property

@@ -27,9 +27,9 @@ get_supported_versions:
       required: true
       selector:
         text:
-    only_stable:
-      name: Only stable versions
-      description: Filter out the unstable versions (not alpha/beta/dev/rc)
+    show_unstable:
+      name: Show unstable versions
+      description: Show also the unstable versions (alpha/beta/dev/rc)
       required: false
       selector:
         boolean:

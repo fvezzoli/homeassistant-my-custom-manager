@@ -153,7 +153,7 @@ def is_stable_version(version: AwesomeVersion) -> bool:
 
 
 def get_supported_versions(
-    custom_data: dict, *, only_stable: bool = True
+    custom_data: dict, *, show_unstable: bool = True
 ) -> list[AwesomeVersion]:
     """Return the latest available version."""
     awesome_ha_version = AwesomeVersion(ha_version)
@@ -161,7 +161,7 @@ def get_supported_versions(
         AwesomeVersion(v)
         for v, data in custom_data[REPO_KEY_VERSIONS].items()
         # Filter unstable versions
-        if (is_stable_version(AwesomeVersion(v)) or not only_stable)
+        if (is_stable_version(AwesomeVersion(v)) or show_unstable)
         # Filter unsupported due to HA version
         and awesome_ha_version >= AwesomeVersion(data[REPO_KEY_HA_MIN])
         and awesome_ha_version <= AwesomeVersion(data.get(REPO_KEY_HA_MAX, ha_version))

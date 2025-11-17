@@ -10,10 +10,14 @@ DOMAIN = "my_custom_manager"
 
 PLATFORMS = [Platform.UPDATE]
 
+# Entry configuration
+
 DEFAULT_POLLING_HOURS = 6
+DEFAULT_SHOW_UNSTABLE = False
 
 CONF_BASE_URL = "base_url"
 CONF_POLL_TIME = "polling_time"
+CONF_SHOW_UNSTABLE = "show_unstable"
 
 # Local custom manifest
 
@@ -46,6 +50,6 @@ SERVICE_DOWNLOAD_CUSTOM = "download_custom"
 SERVICE_KEY_CONFIG_ENTRY = "config_entry"
 SERVICE_KEY_CUSTOM_COMPONENT = "component"
 SERVICE_KEY_INSTALLED_VERSION = "installed_version"
-SERVICE_KEY_ONLY_STABLE = "only_stable"
+SERVICE_KEY_SHOW_UNSTABLE = "show_unstable"
 SERVICE_KEY_SUPPORTED_VERSIONS = "supported_versions"
 SERVICE_KEY_VERSION = "version"
