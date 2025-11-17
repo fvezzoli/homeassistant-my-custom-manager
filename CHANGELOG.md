@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+
+## [2.0.0] - 2025-11-17
+
 - 🔧 Change repository structure
 - 📝 Add repository documentation
 
@@ -29,5 +32,6 @@ This is the legend of the icons:
 - Documentation: 📝
 - Refactoring: 🧠
 
-[Unreleased]: https://git.villavasco.ovh/home-assistant/my-custom-manager/compare/1.0.0...main
+[Unreleased]: https://git.villavasco.ovh/home-assistant/my-custom-manager/compare/2.0.0...main
+[2.0.0]: https://git.villavasco.ovh/home-assistant/my-custom-manager/compare/1.0.0...2.0.0
 [1.0.0]: https://git.villavasco.ovh/home-assistant/my-custom-manager/releases/tag/1.0.0
