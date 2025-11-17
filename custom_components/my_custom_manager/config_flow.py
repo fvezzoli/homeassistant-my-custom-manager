@@ -65,6 +65,7 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
 
             if errors == {}:
                 await self.async_set_unique_id(
+                    # sha1 is used only for unique_id generation not security
                     sha1(base_url.encode()).hexdigest(),  # noqa: S324
                     raise_on_progress=False,
                 )
