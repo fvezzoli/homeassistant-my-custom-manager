@@ -284,18 +284,23 @@ async def async_download_and_install(
 
     def extract_data() -> None:
         with zipfile.ZipFile(io.BytesIO(data)) as zip_data:
-            folder_name = zip_data.namelist()[0]
-            if Path(extract_path).exists():
-                shutil.rmtree(extract_path)
-            zip_data.extractall(extract_path)
-            src_path = Path(extract_path) / folder_name
+            try:
+                folder_name = zip_data.namelist()[0]
+                if Path(extract_path).exists():
+                    shutil.rmtree(extract_path)
+                zip_data.extractall(extract_path)
+                src_path = Path(extract_path) / folder_name
 
-            # Overwrite local files
-            if Path(components_path).exists():
-                shutil.rmtree(components_path)
-            shutil.copytree(src_path, components_path, dirs_exist_ok=True)
-
-            shutil.rmtree(extract_path)
+                # Overwrite local files
+                if Path(components_path).exists():
+                    shutil.rmtree(components_path)
+                shutil.copytree(src_path, components_path, dirs_exist_ok=True)
+            except (FileNotFoundError, PermissionError, shutil.Error, OSError):
+                msg = "Error in file extract"
+                LOGGER.exception(msg)
+            finally:
+                if Path(extract_path).exists():
+                    shutil.rmtree(extract_path)
 
     await hass.async_add_executor_job(extract_data)
 

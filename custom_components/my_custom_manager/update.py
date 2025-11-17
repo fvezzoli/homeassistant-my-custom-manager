@@ -183,9 +183,10 @@ class ComponentUpdateEntity(CoordinatorEntity, UpdateEntity):
         self._attr_in_progress = True
         self.async_write_ha_state()
 
-        self._attr_installed_version = await async_download_and_install(
-            self.hass, self._base_url, self._domain, version
-        )
-
-        self._attr_in_progress = False
-        self.async_write_ha_state()
+        try:
+            self._attr_installed_version = await async_download_and_install(
+                self.hass, self._base_url, self._domain, version
+            )
+        finally:
+            self._attr_in_progress = False
+            self.async_write_ha_state()
