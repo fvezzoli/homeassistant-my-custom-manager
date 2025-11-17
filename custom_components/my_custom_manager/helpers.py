@@ -98,13 +98,15 @@ def get_supported_versions(
     custom_data: dict, *, only_stable: bool = True
 ) -> list[AwesomeVersion]:
     """Return the latest available version."""
+    awesome_ha_version = AwesomeVersion(ha_version)
     return [
         AwesomeVersion(v)
         for v, data in custom_data[KEY_VERSIONS].items()
         # Filter unstable versions
         if (is_stable_version(AwesomeVersion(v)) or not only_stable)
-        and ha_version >= data[KEY_HA_MIN_VERSION]
-        and ha_version <= data.get(KEY_HA_MAX_VERSION, ha_version)
+        and awesome_ha_version >= AwesomeVersion(data[KEY_HA_MIN_VERSION])
+        and awesome_ha_version
+        <= AwesomeVersion(data.get(KEY_HA_MAX_VERSION, ha_version))
     ]
 
 
