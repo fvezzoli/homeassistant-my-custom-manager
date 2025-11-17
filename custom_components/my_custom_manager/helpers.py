@@ -201,7 +201,7 @@ async def async_fetch_page(hass: HomeAssistant, url: str) -> str:
 async def async_get_local_custom_manifest(
     hass: HomeAssistant, component: str
 ) -> dict | None:
-    """Return the custom version readed from manifest.json if exist, otherwise None."""
+    """Return the custom version read from manifest.json if exist, otherwise None."""
     custom_path = hass.config.path(f"custom_components/{component}/manifest.json")
 
     if not Path(custom_path).exists():
@@ -246,7 +246,7 @@ async def async_download_and_install(
     try:
         custom_data = await async_fetch_custom_description(hass, base_url, component)
     except (ConnectionError, ValueError):
-        msg = "Error in repository custom {component} data fetch"
+        msg = f"Error in repository custom {component} data fetch"
         LOGGER.exception(msg)
         raise
 
