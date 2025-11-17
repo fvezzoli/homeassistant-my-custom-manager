@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 class DomainData:
     """Define a class that stores global my custom manager data in hass.data[DOMAIN]."""
 
+    actual_version: str = ""
     _entry_datas: dict[str, RuntimeEntryData] = field(default_factory=dict)
 
     @property

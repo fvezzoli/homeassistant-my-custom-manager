@@ -14,6 +14,7 @@ from homeassistant.exceptions import ConfigEntryNotReady
 
 from .const import (
     CONF_BASE_URL,
+    CUSTOM_MANIFEST_VERSION,
     DOMAIN,
     LOGGER,
     PLATFORMS,
@@ -26,6 +27,7 @@ from .entry_data import RuntimeEntryData
 from .helpers import (
     REPO_KEY_CUSTOMS,
     async_fetch_repository_description,
+    async_get_local_custom_manifest,
 )
 from .services import (
     SERVICE_DOWNLOAD_CUSTOM_SCHEMA,
@@ -43,6 +45,10 @@ if TYPE_CHECKING:
 
 async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
     """Register the component integration services."""
+    domain_data = DomainData.get(hass)
+    domain_data.actual_version = (
+        await async_get_local_custom_manifest(hass, DOMAIN) or {}
+    ).get(CUSTOM_MANIFEST_VERSION, "")
 
     async def handle_customs_list(call: ServiceCall) -> ServiceResponse:
         """Download the repository customs list."""

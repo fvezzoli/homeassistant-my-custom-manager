@@ -4,7 +4,6 @@ from logging import Logger, getLogger
 
 from homeassistant.const import Platform
 
-VERSION = "1.0.0"
 LOGGER: Logger = getLogger(__package__)
 
 DOMAIN = "my_custom_manager"
@@ -16,8 +15,10 @@ DEFAULT_POLLING_HOURS = 6
 CONF_BASE_URL = "base_url"
 CONF_POLL_TIME = "polling_time"
 
-MANIFEST_VERSION = "version"
-MANIFEST_NAME = "name"
+# Local custom manifest
+
+CUSTOM_MANIFEST_NAME = "name"
+CUSTOM_MANIFEST_VERSION = "version"
 
 # Repository description
 

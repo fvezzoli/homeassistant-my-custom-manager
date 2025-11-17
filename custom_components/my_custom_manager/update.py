@@ -17,11 +17,10 @@ from homeassistant.helpers.update_coordinator import (
 from .const import (
     CONF_BASE_URL,
     CONF_POLL_TIME,
+    CUSTOM_MANIFEST_NAME,
+    CUSTOM_MANIFEST_VERSION,
     DOMAIN,
     LOGGER,
-    MANIFEST_NAME,
-    MANIFEST_VERSION,
-    VERSION,
 )
 from .domain_data import DomainData
 from .helpers import (
@@ -51,7 +50,7 @@ async def async_setup_entry(
     update_entity: list[ComponentUpdateEntity] = []
     for domain in entry_runtime_data.customs_list:
         domain_manifest = await async_get_local_custom_manifest(hass, domain) or {}
-        domain_version = domain_manifest.get(MANIFEST_VERSION, None)
+        domain_version = domain_manifest.get(CUSTOM_MANIFEST_VERSION, None)
         if domain_version:
             coordinator = EntityUpdateCoordinator(
                 hass,
@@ -67,7 +66,7 @@ async def async_setup_entry(
                         entry.data[CONF_BASE_URL],
                         domain,
                         domain_version,
-                        domain_manifest.get(MANIFEST_NAME, domain),
+                        domain_manifest.get(CUSTOM_MANIFEST_NAME, domain),
                     )
                 ]
             )
@@ -153,7 +152,7 @@ class ComponentUpdateEntity(CoordinatorEntity, UpdateEntity):
             identifiers={(DOMAIN, f"{self._domain}_update")},
             model="My custom manager updater",
             name=self._domain_name,
-            sw_version=VERSION,
+            sw_version=DomainData.get(self.hass).actual_version,
         )
 
     async def async_release_notes(self) -> str | None:
@@ -176,7 +175,12 @@ class ComponentUpdateEntity(CoordinatorEntity, UpdateEntity):
         """Latest available version."""
         return self.coordinator.data
 
-    async def async_install(self, version: str | None, **_kwargs: Any) -> None:
+    async def async_install(
+        self,
+        version: str | None,
+        _backup: bool,  # noqa: FBT001
+        **_kwargs: Any,
+    ) -> None:
         """Perform the integration download and file substitution."""
         version = version or str(self.coordinator.data)
 

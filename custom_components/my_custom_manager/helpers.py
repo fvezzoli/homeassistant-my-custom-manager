@@ -23,8 +23,8 @@ from homeassistant.helpers.issue_registry import (
 )
 
 from .const import (
+    CUSTOM_MANIFEST_VERSION,
     LOGGER,
-    MANIFEST_VERSION,
     REPO_JSON_CUSTOM,
     REPO_JSON_DESC,
     REPO_KEY_CHANGELOG,
@@ -297,7 +297,7 @@ async def check_version_installed(
 ) -> None | AwesomeVersion:
     """Check the installed version and raise repair."""
     component_manifest = await async_get_local_custom_manifest(hass, component) or {}
-    manifest_version = component_manifest.get(MANIFEST_VERSION)
+    manifest_version = component_manifest.get(CUSTOM_MANIFEST_VERSION)
     installed_version = AwesomeVersion(manifest_version) if manifest_version else None
 
     translation_placeholders = {
