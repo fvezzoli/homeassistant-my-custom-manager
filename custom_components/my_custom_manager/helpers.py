@@ -88,7 +88,7 @@ REPOSITORY_SCHEMA = vol.Schema(
 
 
 def is_stable_version(version: AwesomeVersion) -> bool:
-    """Return if version is not stable."""
+    """Return if version is stable."""
     return not (
         version.alpha or version.beta or version.dev or version.release_candidate
     )
