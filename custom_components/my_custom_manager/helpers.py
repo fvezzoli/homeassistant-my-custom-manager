@@ -168,11 +168,6 @@ def get_supported_versions(
     ]
 
 
-def get_latest_version(custom_data: dict, *, only_stable: bool = True) -> str:
-    """Return the latest available version."""
-    return str(max(get_supported_versions(custom_data, only_stable=only_stable)))
-
-
 async def async_fetch_page(hass: HomeAssistant, url: str) -> str:
     """Download the different custom version available."""
     session = async_get_clientsession(hass)
@@ -224,9 +219,9 @@ async def async_download_and_install(
     component: str,
     version: AwesomeVersion,
     version_desc: dict,
-) -> None | AwesomeVersion:
+) -> None:
     """Download and install custom component from remote repository."""
-    LOGGER.debug("Try to download custom '%s'@'%s'", component, version or "latest")
+    LOGGER.debug("Try to download custom %s@%s", component, version or "latest")
 
     session = async_get_clientsession(hass)
     try:
@@ -283,15 +278,11 @@ async def async_download_and_install(
 
     await hass.async_add_executor_job(extract_data)
 
-    learn_more_url: None | str = version_desc.get(
-        REPO_KEY_HOMEPAGE
-    ) or version_desc.get(REPO_KEY_RELEASE_FILE)
-    return await check_version_installed(hass, component, version, learn_more_url)
-
 
 async def check_version_installed(
     hass: HomeAssistant,
     component: str,
+    component_name: str,
     version: AwesomeVersion,
     learn_more_url: None | str,
 ) -> None | AwesomeVersion:
@@ -301,6 +292,7 @@ async def check_version_installed(
     installed_version = AwesomeVersion(manifest_version) if manifest_version else None
 
     translation_placeholders = {
+        "component_name": component_name,
         "component": component,
         "desidered_version": version,
         "installed_version": installed_version or "[Not retrived]",
@@ -312,9 +304,10 @@ async def check_version_installed(
             hass,
             component,
             "restart_required",
-            is_fixable=True,
+            is_fixable=False,
             severity=IssueSeverity.WARNING,
             translation_key="restart_required",
+            learn_more_url=learn_more_url,
             translation_placeholders=translation_placeholders,
         )
     else:

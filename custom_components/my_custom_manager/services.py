@@ -12,6 +12,7 @@ from homeassistant.helpers import config_validation as cv
 from .const import (
     CONF_BASE_URL,
     REPO_KEY_HOMEPAGE,
+    REPO_KEY_NAME,
     REPO_KEY_RELEASE_FILE,
     SERVICE_KEY_CONFIG_ENTRY,
     SERVICE_KEY_CUSTOM_COMPONENT,
@@ -137,7 +138,11 @@ async def handle_service_custom_download(
         REPO_KEY_HOMEPAGE
     ) or version_desc.get(REPO_KEY_RELEASE_FILE)
     intalled_version = await check_version_installed(
-        hass, custom_integration, version, learn_more_url
+        hass,
+        custom_integration,
+        custom_data[REPO_KEY_NAME],
+        version,
+        learn_more_url,
     )
 
     return {SERVICE_KEY_INSTALLED_VERSION: intalled_version}

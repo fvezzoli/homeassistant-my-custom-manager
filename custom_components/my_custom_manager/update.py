@@ -5,8 +5,10 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any, cast
 
+from awesomeversion import AwesomeVersion
 from homeassistant.components.update import UpdateEntity, UpdateEntityFeature
 from homeassistant.const import EntityCategory
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
@@ -19,18 +21,20 @@ from .const import (
     CONF_POLL_TIME,
     CUSTOM_MANIFEST_NAME,
     CUSTOM_MANIFEST_VERSION,
+    DEFAULT_POLLING_HOURS,
     DOMAIN,
     LOGGER,
+    SERVICE_KEY_INSTALLED_VERSION,
 )
 from .domain_data import DomainData
 from .helpers import (
     REPO_KEY_CHANGELOG,
-    async_download_and_install,
     async_fetch_custom_description,
     async_fetch_page,
     async_get_local_custom_manifest,
-    get_latest_version,
+    get_supported_versions,
 )
+from .services import handle_service_custom_download
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -48,25 +52,26 @@ async def async_setup_entry(
     entry_runtime_data = entry_domain_data.get_entry_data(entry)
 
     update_entity: list[ComponentUpdateEntity] = []
-    for domain in entry_runtime_data.customs_list:
-        domain_manifest = await async_get_local_custom_manifest(hass, domain) or {}
-        domain_version = domain_manifest.get(CUSTOM_MANIFEST_VERSION, None)
-        if domain_version:
+    for custom_integration in entry_runtime_data.customs_list:
+        custom_manifest = (
+            await async_get_local_custom_manifest(hass, custom_integration) or {}
+        )
+        local_custom_version = custom_manifest.get(CUSTOM_MANIFEST_VERSION, None)
+        if local_custom_version:
             coordinator = EntityUpdateCoordinator(
                 hass,
-                domain,
-                entry.data[CONF_BASE_URL],
-                entry.options[CONF_POLL_TIME],
+                custom_integration,
+                entry,
             )
             await coordinator.async_config_entry_first_refresh()
             update_entity.extend(
                 [
                     ComponentUpdateEntity(
                         coordinator,
-                        entry.data[CONF_BASE_URL],
-                        domain,
-                        domain_version,
-                        domain_manifest.get(CUSTOM_MANIFEST_NAME, domain),
+                        entry,
+                        custom_integration,
+                        local_custom_version,
+                        custom_manifest.get(CUSTOM_MANIFEST_NAME, custom_integration),
                     )
                 ]
             )
@@ -80,34 +85,37 @@ class EntityUpdateCoordinator(DataUpdateCoordinator):
     def __init__(
         self,
         hass: HomeAssistant,
-        domain: str,
-        base_url: str,
-        update_interval: int,
+        custom_integration: str,
+        entry: ConfigEntry,
     ) -> None:
         """Init and start the update coordinator."""
-        self._domain = domain
-        self._base_url = base_url
+        self._custom_integration = custom_integration
+        self._entry = entry
+
         self._changelog_url: None | str = None
 
         super().__init__(
             hass,
             LOGGER,
-            name=f"{domain}_update",
-            update_interval=timedelta(hours=update_interval),
+            name=f"{custom_integration}_update",
+            update_interval=timedelta(
+                hours=entry.options.get(CONF_POLL_TIME, DEFAULT_POLLING_HOURS)
+            ),
         )
 
     async def _async_update_data(self) -> str:
         try:
-            domain_data = await async_fetch_custom_description(
-                self.hass, self._base_url, self._domain
+            custom_repo_data = await async_fetch_custom_description(
+                self.hass, self._entry.data[CONF_BASE_URL], self._custom_integration
             )
         except (ConnectionError, ValueError) as err:
             msg = "Error in data fetch"
             raise UpdateFailed(msg) from err
 
-        self._changelog_url = domain_data.get(REPO_KEY_CHANGELOG)
+        self._changelog_url = custom_repo_data.get(REPO_KEY_CHANGELOG, None)
 
-        return get_latest_version(domain_data, only_stable=True)
+        supported_versions = get_supported_versions(custom_repo_data, only_stable=True)
+        return str(max(supported_versions))
 
     @property
     def changelog_url(self) -> None | str:
@@ -125,18 +133,18 @@ class ComponentUpdateEntity(CoordinatorEntity, UpdateEntity):
     def __init__(
         self,
         coordinator: EntityUpdateCoordinator,
-        base_url: str,
-        domain: str,
+        config_entry: ConfigEntry,
+        custom_integration: str,
         actual_version: str,
         name: str,
     ) -> None:
         """Init the integration update entity."""
         super().__init__(coordinator)
-        self._base_url = base_url
-        self._domain = domain
-        self._domain_name = name
+        self._config_entry = config_entry
+        self._custom_integration = custom_integration
+        self._custom_name = name
         self._attr_installed_version = actual_version
-        self._attr_unique_id = f"{domain}_update"
+        self._attr_unique_id = f"{custom_integration}_update"
         self._attr_in_progress = False
 
         self._attr_supported_features = (
@@ -149,9 +157,9 @@ class ComponentUpdateEntity(CoordinatorEntity, UpdateEntity):
     def device_info(self) -> DeviceInfo:
         """Return the device information."""
         return DeviceInfo(
-            identifiers={(DOMAIN, f"{self._domain}_update")},
+            identifiers={(DOMAIN, f"{self._custom_integration}_update")},
             model="My custom manager updater",
-            name=self._domain_name,
+            name=self._custom_name,
             sw_version=DomainData.get(self.hass).actual_version,
         )
 
@@ -183,14 +191,28 @@ class ComponentUpdateEntity(CoordinatorEntity, UpdateEntity):
     ) -> None:
         """Perform the integration download and file substitution."""
         version = version or str(self.coordinator.data)
+        if version is None:
+            msg = "Requested version is not valid"
+            raise HomeAssistantError(msg)
+        version = AwesomeVersion(version)
 
         self._attr_in_progress = True
         self.async_write_ha_state()
 
+        returned_version: AwesomeVersion | None = None
         try:
-            self._attr_installed_version = await async_download_and_install(
-                self.hass, self._base_url, self._domain, version
-            )
+            returned_version = (
+                await handle_service_custom_download(
+                    self.hass,
+                    self._config_entry,
+                    self._custom_integration,
+                    str(version),
+                )
+            ).get(SERVICE_KEY_INSTALLED_VERSION, None)
         finally:
+            self._attr_installed_version = (
+                str(returned_version) if returned_version else None
+            )
+
             self._attr_in_progress = False
             self.async_write_ha_state()
