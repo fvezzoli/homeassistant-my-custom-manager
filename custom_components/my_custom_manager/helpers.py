@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import aiohttp
+import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from aiohttp.client_exceptions import ClientError
 from awesomeversion import AwesomeVersion, AwesomeVersionException
@@ -56,8 +57,8 @@ CUSTOM_VERSION_SCHEMA = vol.Schema(
     {
         vol.Required(KEY_HA_MIN_VERSION): awesome_version_validator,
         vol.Optional(KEY_HA_MAX_VERSION): awesome_version_validator,
-        vol.Required(KEY_RELEASE_FILE): vol.Url(),  # pyright: ignore[reportCallIssue]
-        vol.Optional(KEY_HOMEPAGE): vol.Url(),  # pyright: ignore[reportCallIssue]
+        vol.Required(KEY_RELEASE_FILE): cv.url,
+        vol.Optional(KEY_HOMEPAGE): cv.url,
     },
     extra=False,
 )
@@ -68,8 +69,8 @@ CUSTOM_SCHEMA = vol.Schema(
     {
         vol.Required(KEY_NAME): str,
         vol.Optional(KEY_DESCRIPTION): str,
-        vol.Optional(KEY_HOMEPAGE): vol.Url(),  # pyright: ignore[reportCallIssue]
-        vol.Optional(KEY_CHANGELOG): vol.Url(),  # pyright: ignore[reportCallIssue]
+        vol.Optional(KEY_HOMEPAGE): cv.url,
+        vol.Optional(KEY_CHANGELOG): cv.url,
         vol.Required(KEY_VERSIONS): CUSTOM_VERSIONS_LIST_SCHEMA,
     },
     extra=False,
@@ -80,7 +81,7 @@ REPOSITORY_SCHEMA = vol.Schema(
     {
         vol.Required(KEY_NAME): str,
         vol.Optional(KEY_DESCRIPTION): str,
-        vol.Optional(KEY_HOMEPAGE): vol.Url(),  # pyright: ignore[reportCallIssue]
+        vol.Optional(KEY_HOMEPAGE): cv.url,
         vol.Required(KEY_CUSTOMS): REPOSITORY_CUSTOM_SCHEMA,
     },
     extra=False,
