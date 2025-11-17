@@ -26,7 +26,9 @@ from .const import (
     DOMAIN,
 )
 from .helpers import (
-    KEY_DESC,
+    KEY_CUSTOMS,
+    KEY_DESCRIPTION,
+    KEY_NAME,
     async_fetch_repository_data,
 )
 
@@ -40,6 +42,9 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
     VERSION = 1
     MINOR_VERSION = 0
     CONNECTION_CLASS = CONN_CLASS_CLOUD_POLL
+
+    _repo_name: str = "My custom repository"
+    _data: dict
 
     @staticmethod
     @callback
@@ -76,12 +81,13 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
                     errors[CONF_BASE_URL] = "invalid_repository"
 
                 if repo_desc:
-                    return self.async_create_entry(
-                        title=repo_desc[KEY_DESC],
-                        data=user_input,
-                        options={CONF_POLL_TIME: DEFAULT_POLLING_HOURS},
-                    )
+                    self._repo_name = repo_desc[KEY_NAME]
+                    self._data = user_input
+                    return self._show_step_welcome_form(repo_desc)
 
+        return self._show_step_user_flow(errors)
+
+    def _show_step_user_flow(self, errors: dict) -> ConfigFlowResult:
         schema = vol.Schema(
             {
                 vol.Required(CONF_BASE_URL): str,
@@ -89,6 +95,34 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
         )
 
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
+
+    async def async_step_welcome(
+        self, user_input: dict | None = None
+    ) -> ConfigFlowResult:
+        """Confirm the entry creation."""
+        if user_input is not None:
+            return self.async_create_entry(
+                title=self._repo_name,
+                data=self._data,
+                options={CONF_POLL_TIME: DEFAULT_POLLING_HOURS},
+            )
+
+        return self._show_step_user_flow({})
+
+    def _show_step_welcome_form(self, repo_desc: dict) -> ConfigFlowResult:
+        customs_list = ""
+        for custom in repo_desc[KEY_CUSTOMS]:
+            customs_list += f"- **{custom}**: {repo_desc[KEY_CUSTOMS][custom]}\n"
+
+        return self.async_show_form(
+            step_id="welcome",
+            data_schema=vol.Schema({}),
+            description_placeholders={
+                "name": repo_desc[KEY_NAME],
+                "description": repo_desc[KEY_DESCRIPTION],
+                "list": customs_list,
+            },
+        )
 
 
 class OptionsFlowHandler(OptionsFlow):

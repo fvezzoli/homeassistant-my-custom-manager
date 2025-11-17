@@ -13,9 +13,8 @@ PLATFORMS = [Platform.UPDATE]
 
 DEFAULT_POLLING_HOURS = 6
 
-JSON_REPO_DESC = "desc.json"
-CHANGELOG_FILE = "changelog.md"
-JSON_CUSTOM = "releases.json"
+JSON_REPO_DESC = "repository.json"
+JSON_CUSTOM = "custom.json"
 
 CONF_BASE_URL = "base_url"
 CONF_POLL_TIME = "polling_time"

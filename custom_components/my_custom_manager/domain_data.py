@@ -19,7 +19,6 @@ class DomainData:
     """Define a class that stores global my custom manager data in hass.data[DOMAIN]."""
 
     _entry_datas: dict[str, RuntimeEntryData] = field(default_factory=dict)
-    custom_list: list[str] = field(default_factory=list)
 
     @property
     def is_empty_entry_data(self) -> bool:

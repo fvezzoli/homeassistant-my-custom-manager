@@ -4,11 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-
+- 🔧 Change repository structure
+- 📝 Add repository documentation
 
 ## [1.0.0] - 2025-11-12
 
 - ✨ First Release
+
+---
+---
 
 # Legend
 

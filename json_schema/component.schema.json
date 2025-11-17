@@ -1,0 +1,60 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://git.villavasco.ovh/home-assistant/my-custom-manager/raw/branch/main/json_schema/components.schema.json",
+    "title": "Component description",
+    "version": "1",
+    "type": "object",
+    "properties": {
+        "name": {
+            "type": "string"
+        },
+        "description": {
+            "type": "string"
+        },
+        "homepage": {
+            "type": "string",
+            "format": "uri"
+        },
+        "changelog": {
+            "type": "string",
+            "format": "uri"
+        },
+        "versions": {
+            "type": "object",
+            "description": "List of available versions",
+            "patternProperties": {
+                "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$": {
+                    "type": "object",
+                    "properties": {
+                        "ha_min": {
+                            "type": "string"
+                        },
+                        "ha_max": {
+                            "type": "string"
+                        },
+                        "release_file": {
+                            "type": "string",
+                            "format": "uri"
+                        },
+                        "homepage": {
+                            "type": "string",
+                            "format": "uri"
+                        }
+                    },
+                    "required": [
+                        "ha_min",
+                        "release_file"
+                    ],
+                    "additionalProperties": false
+                }
+            },
+            "additionalProperties": false
+        }
+    },
+    "required": [
+        "name",
+        "description",
+        "versions"
+    ],
+    "additionalProperties": false
+}
