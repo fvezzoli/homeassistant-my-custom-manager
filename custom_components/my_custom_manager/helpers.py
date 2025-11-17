@@ -169,10 +169,10 @@ async def async_fetch_custom_description(
                 LOGGER.exception(msg)
                 raise ValueError(msg) from err
 
-    except ClientError:
+    except ClientError as err:
         msg = f"Catch error in HTTP request for {component}"
         LOGGER.exception(msg)
-        raise ConnectionError(msg) from None
+        raise ConnectionError(msg) from err
 
 
 async def async_fetch_page(hass: HomeAssistant, url: str) -> str:
@@ -192,10 +192,10 @@ async def async_fetch_page(hass: HomeAssistant, url: str) -> str:
 
             return await resp.text()
 
-    except ClientError:
+    except ClientError as err:
         msg = "Catch error in HTTP request"
         LOGGER.exception(msg)
-        raise ConnectionError(msg) from None
+        raise ConnectionError(msg) from err
 
 
 async def async_get_local_custom_manifest(
@@ -272,10 +272,10 @@ async def async_download_and_install(
                 raise ConnectionError(msg)
             data = await resp.read()
 
-    except ClientError:
+    except ClientError as err:
         msg = f"Catch error in release file for {component}@{version} download"
         LOGGER.exception(msg)
-        raise ConnectionError(msg) from None
+        raise ConnectionError(msg) from err
 
     # Extract data in memory and substitute files in the destination directory
     extract_path = hass.config.path(f"custom_components/_tmp_{component}")
