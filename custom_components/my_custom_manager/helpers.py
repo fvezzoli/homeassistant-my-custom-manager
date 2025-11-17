@@ -22,30 +22,31 @@ from homeassistant.helpers.issue_registry import (
     async_create_issue,
 )
 
-from .const import JSON_CUSTOM, JSON_REPO_DESC, LOGGER, MANIFEST_VERSION
+from .const import (
+    LOGGER,
+    MANIFEST_VERSION,
+    REPO_JSON_CUSTOM,
+    REPO_JSON_DESC,
+    REPO_KEY_CHANGELOG,
+    REPO_KEY_CUSTOMS,
+    REPO_KEY_DESCRIPTION,
+    REPO_KEY_HA_MAX,
+    REPO_KEY_HA_MIN,
+    REPO_KEY_HOMEPAGE,
+    REPO_KEY_NAME,
+    REPO_KEY_RELEASE_FILE,
+    REPO_KEY_VERSIONS,
+    REPO_REQUEST_TIMEOUT,
+)
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
-
-_REQUEST_TIMEOUT = 5.0
-
-KEY_CHANGELOG = "changelog"
-KEY_CUSTOMS = "customs"
-KEY_DESCRIPTION = "description"
-KEY_HA_MIN_VERSION = "ha_min"
-KEY_HA_MAX_VERSION = "ha_max"
-KEY_HOMEPAGE = "homepage"
-KEY_NAME = "name"
-KEY_RELEASE_FILE = "release_file"
-KEY_VERSIONS = "versions"
-
-## Repository schemas
 
 
 def awesome_version_validator(value: str) -> str:
     """Valida che la stringa sia una versione valida AwesomeVersion."""
     try:
-        _ = AwesomeVersion(value)
+        value = AwesomeVersion(value)
     except AwesomeVersionException as err:
         msg = f"Invalid version string: {err}"
         raise vol.Invalid(msg) from err
@@ -55,10 +56,10 @@ def awesome_version_validator(value: str) -> str:
 
 CUSTOM_VERSION_SCHEMA = vol.Schema(
     {
-        vol.Required(KEY_HA_MIN_VERSION): awesome_version_validator,
-        vol.Optional(KEY_HA_MAX_VERSION): awesome_version_validator,
-        vol.Required(KEY_RELEASE_FILE): cv.url,
-        vol.Optional(KEY_HOMEPAGE): cv.url,
+        vol.Required(REPO_KEY_HA_MIN): awesome_version_validator,
+        vol.Optional(REPO_KEY_HA_MAX): awesome_version_validator,
+        vol.Required(REPO_KEY_RELEASE_FILE): cv.url,
+        vol.Optional(REPO_KEY_HOMEPAGE): cv.url,
     },
     extra=False,
 )
@@ -67,11 +68,11 @@ CUSTOM_VERSIONS_LIST_SCHEMA = vol.Schema(
 )
 CUSTOM_SCHEMA = vol.Schema(
     {
-        vol.Required(KEY_NAME): str,
-        vol.Optional(KEY_DESCRIPTION): str,
-        vol.Optional(KEY_HOMEPAGE): cv.url,
-        vol.Optional(KEY_CHANGELOG): cv.url,
-        vol.Required(KEY_VERSIONS): CUSTOM_VERSIONS_LIST_SCHEMA,
+        vol.Required(REPO_KEY_NAME): str,
+        vol.Optional(REPO_KEY_DESCRIPTION): str,
+        vol.Optional(REPO_KEY_HOMEPAGE): cv.url,
+        vol.Optional(REPO_KEY_CHANGELOG): cv.url,
+        vol.Required(REPO_KEY_VERSIONS): CUSTOM_VERSIONS_LIST_SCHEMA,
     },
     extra=False,
 )
@@ -79,13 +80,69 @@ CUSTOM_SCHEMA = vol.Schema(
 REPOSITORY_CUSTOM_SCHEMA = vol.Schema({str: str}, extra=False)
 REPOSITORY_SCHEMA = vol.Schema(
     {
-        vol.Required(KEY_NAME): str,
-        vol.Optional(KEY_DESCRIPTION): str,
-        vol.Optional(KEY_HOMEPAGE): cv.url,
-        vol.Required(KEY_CUSTOMS): REPOSITORY_CUSTOM_SCHEMA,
+        vol.Required(REPO_KEY_NAME): str,
+        vol.Optional(REPO_KEY_DESCRIPTION): str,
+        vol.Optional(REPO_KEY_HOMEPAGE): cv.url,
+        vol.Required(REPO_KEY_CUSTOMS): REPOSITORY_CUSTOM_SCHEMA,
     },
     extra=False,
 )
+
+
+async def async_fetch_repository_description(
+    hass: HomeAssistant, base_url: str
+) -> dict:
+    """Download the repo description with custom list."""
+    session = async_get_clientsession(hass)
+    try:
+        async with (
+            session.get(
+                f"{base_url}/{REPO_JSON_DESC}",
+                timeout=aiohttp.ClientTimeout(total=REPO_REQUEST_TIMEOUT),
+            ) as resp,
+        ):
+            if resp.status != HTTPStatus.OK:
+                msg = f"Description request error: {resp.status}"
+                raise ConnectionError(msg)
+
+            try:
+                data = await resp.json()
+                return REPOSITORY_SCHEMA(data)
+            except (vol.Invalid, json.JSONDecodeError) as err:
+                msg = "Invalid repository description"
+                raise ValueError(msg) from err
+
+    except ClientError as err:
+        msg = "HTTP request error"
+        raise ConnectionError(msg) from err
+
+
+async def async_fetch_custom_description(
+    hass: HomeAssistant, base_url: str, component: str
+) -> dict:
+    """Download the different custom version available."""
+    session = async_get_clientsession(hass)
+    try:
+        async with (
+            session.get(
+                f"{base_url}/{component}/{REPO_JSON_CUSTOM}",
+                timeout=aiohttp.ClientTimeout(total=REPO_REQUEST_TIMEOUT),
+            ) as resp,
+        ):
+            if resp.status != HTTPStatus.OK:
+                msg = f"Description for {component} request error: {resp.status}"
+                raise ConnectionError(msg)
+
+            try:
+                data = await resp.json()
+                return CUSTOM_SCHEMA(data)
+            except (vol.Invalid, json.JSONDecodeError) as err:
+                msg = f"Invalid {component} description found"
+                raise ValueError(msg) from err
+
+    except ClientError as err:
+        msg = f"HTTP request error for {component}"
+        raise ConnectionError(msg) from err
 
 
 def is_stable_version(version: AwesomeVersion) -> bool:
@@ -102,78 +159,18 @@ def get_supported_versions(
     awesome_ha_version = AwesomeVersion(ha_version)
     return [
         AwesomeVersion(v)
-        for v, data in custom_data[KEY_VERSIONS].items()
+        for v, data in custom_data[REPO_KEY_VERSIONS].items()
         # Filter unstable versions
         if (is_stable_version(AwesomeVersion(v)) or not only_stable)
-        and awesome_ha_version >= AwesomeVersion(data[KEY_HA_MIN_VERSION])
-        and awesome_ha_version
-        <= AwesomeVersion(data.get(KEY_HA_MAX_VERSION, ha_version))
+        # Filter unsupported due to HA version
+        and awesome_ha_version >= AwesomeVersion(data[REPO_KEY_HA_MIN])
+        and awesome_ha_version <= AwesomeVersion(data.get(REPO_KEY_HA_MAX, ha_version))
     ]
 
 
 def get_latest_version(custom_data: dict, *, only_stable: bool = True) -> str:
     """Return the latest available version."""
     return str(max(get_supported_versions(custom_data, only_stable=only_stable)))
-
-
-async def async_fetch_repository_data(hass: HomeAssistant, base_url: str) -> dict:
-    """Download the repo description with custom list."""
-    session = async_get_clientsession(hass)
-    try:
-        async with (
-            session.get(
-                f"{base_url}/{JSON_REPO_DESC}",
-                timeout=aiohttp.ClientTimeout(total=_REQUEST_TIMEOUT),
-            ) as resp,
-        ):
-            if resp.status != HTTPStatus.OK:
-                msg = f"Description request error: {resp.status}"
-                LOGGER.warning(msg)
-                raise ConnectionError(msg)
-
-            try:
-                data = await resp.json()
-                return REPOSITORY_SCHEMA(data)
-            except (vol.Invalid, json.JSONDecodeError) as err:
-                msg = "Invalid repository description found"
-                LOGGER.exception(msg)
-                raise ValueError(msg) from err
-
-    except ClientError as err:
-        msg = "Catch error in HTTP request"
-        LOGGER.exception(msg)
-        raise ConnectionError(msg) from err
-
-
-async def async_fetch_custom_description(
-    hass: HomeAssistant, base_url: str, component: str
-) -> dict:
-    """Download the different custom version available."""
-    session = async_get_clientsession(hass)
-    try:
-        async with (
-            session.get(
-                f"{base_url}/{component}/{JSON_CUSTOM}",
-                timeout=aiohttp.ClientTimeout(total=_REQUEST_TIMEOUT),
-            ) as resp,
-        ):
-            if resp.status != HTTPStatus.OK:
-                msg = f"Custom {component} request error: {resp.status}"
-                LOGGER.warning(msg)
-                raise ConnectionError(msg)
-
-            try:
-                data = await resp.json()
-                return CUSTOM_SCHEMA(data)
-            except (vol.Invalid, json.JSONDecodeError) as err:
-                msg = f"Invalid custom {component} description found"
-                LOGGER.exception(msg)
-                raise ValueError(msg) from err
-
-    except ClientError as err:
-        msg = f"Catch error in HTTP request for {component}"
-        LOGGER.exception(msg)
-        raise ConnectionError(msg) from err
 
 
 async def async_fetch_page(hass: HomeAssistant, url: str) -> str:
@@ -183,7 +180,7 @@ async def async_fetch_page(hass: HomeAssistant, url: str) -> str:
         async with (
             session.get(
                 url,
-                timeout=aiohttp.ClientTimeout(total=_REQUEST_TIMEOUT),
+                timeout=aiohttp.ClientTimeout(total=REPO_REQUEST_TIMEOUT),
             ) as resp,
         ):
             if resp.status != HTTPStatus.OK:
@@ -224,46 +221,18 @@ async def async_get_local_custom_manifest(
 
 async def async_download_and_install(
     hass: HomeAssistant,
-    base_url: str,
     component: str,
-    version: None | str = "",
-    *,
-    only_stable: bool = True,
-) -> None | str:
+    version: AwesomeVersion,
+    version_desc: dict,
+) -> None | AwesomeVersion:
     """Download and install custom component from remote repository."""
     LOGGER.debug("Try to download custom '%s'@'%s'", component, version or "latest")
-
-    try:
-        repo_data = await async_fetch_repository_data(hass, base_url)
-    except (ConnectionError, ValueError):
-        msg = "Error in repository data fetch"
-        LOGGER.exception(msg)
-        raise
-    if component not in repo_data[KEY_CUSTOMS]:
-        msg = "The custom is not present in the repository"
-        LOGGER.error(msg)
-        raise ValueError(msg)
-
-    try:
-        custom_data = await async_fetch_custom_description(hass, base_url, component)
-    except (ConnectionError, ValueError):
-        msg = f"Error in repository custom {component} data fetch"
-        LOGGER.exception(msg)
-        raise
-
-    version = (
-        version or get_latest_version(custom_data, only_stable=only_stable) or None
-    )
-    if version is None or version not in custom_data[KEY_VERSIONS]:
-        msg = "No valid version {version} for {component} requested"
-        LOGGER.error(msg)
-        raise ValueError(msg)
 
     session = async_get_clientsession(hass)
     try:
         async with (
             session.get(
-                custom_data[KEY_VERSIONS][version][KEY_RELEASE_FILE],
+                version_desc[REPO_KEY_RELEASE_FILE],
                 timeout=aiohttp.ClientTimeout(total=10),
             ) as resp,
         ):
@@ -314,18 +283,22 @@ async def async_download_and_install(
 
     await hass.async_add_executor_job(extract_data)
 
-    learn_more_url = custom_data[KEY_VERSIONS][version].get(
-        KEY_HOMEPAGE
-    ) or custom_data[KEY_VERSIONS][version].get(KEY_RELEASE_FILE)
+    learn_more_url: None | str = version_desc.get(
+        REPO_KEY_HOMEPAGE
+    ) or version_desc.get(REPO_KEY_RELEASE_FILE)
     return await check_version_installed(hass, component, version, learn_more_url)
 
 
 async def check_version_installed(
-    hass: HomeAssistant, component: str, version: str, learn_more_url: str
-) -> None | str:
+    hass: HomeAssistant,
+    component: str,
+    version: AwesomeVersion,
+    learn_more_url: None | str,
+) -> None | AwesomeVersion:
     """Check the installed version and raise repair."""
     component_manifest = await async_get_local_custom_manifest(hass, component) or {}
-    installed_version = component_manifest.get(MANIFEST_VERSION)
+    manifest_version = component_manifest.get(MANIFEST_VERSION)
+    installed_version = AwesomeVersion(manifest_version) if manifest_version else None
 
     translation_placeholders = {
         "component": component,
@@ -334,7 +307,7 @@ async def check_version_installed(
     }
 
     if installed_version == version:
-        LOGGER.info("Install version %s for %s completed.", version, component)
+        LOGGER.info("Installation of %s@%s completed.", component, version)
         async_create_issue(
             hass,
             component,
@@ -345,7 +318,7 @@ async def check_version_installed(
             translation_placeholders=translation_placeholders,
         )
     else:
-        LOGGER.error("Error in install version %s for %s.", version, component)
+        LOGGER.error("Installation of %s@%s failed.", component, version)
         async_create_issue(
             hass,
             component,

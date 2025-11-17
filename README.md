@@ -39,7 +39,7 @@ You can also adjust the polling interval in the integration’s Options Flow.
 
 ## 🧰 Services
 
-### my_custom_manager.download_list
+### my_custom_manager.get_customs_list
 
 Download the list of custom_component managed by the repository.
 
@@ -51,6 +51,24 @@ The returned data is a dictionary with name and description:
 ```yaml
 my_custom_manager: My Custom Component Version Manager
 another_custom: Another beautiful custom component for HomeAssistant
+```
+
+### my_custom_manager.get_supported_versions
+
+Fetch the list of available versions for specific custom component.
+
+Fields:
+| Field        | Description                                  | Required  |
+|--------------|----------------------------------------------|-----------|
+| config_entry | Select the configured instance to use        | ✅        |
+| component    | Name of the component to download            | ✅        |
+| only_stable  | Return also ustable versions (alpha,beta,rc) | ❌ (True) |
+
+The returned data is a list of available versions:
+```yaml
+supported_versions:
+  - 2.0.0
+  - 1.0.0
 ```
 
 ### my_custom_manager.download_custom

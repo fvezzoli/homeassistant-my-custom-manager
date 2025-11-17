@@ -7,93 +7,79 @@ https://git.villavasco.ovh/home-assistant/my-custom-manager/
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
-import voluptuous as vol
-from homeassistant.core import SupportsResponse
-from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError
-from homeassistant.helpers import config_validation as cv
+from homeassistant.core import ServiceResponse, SupportsResponse
+from homeassistant.exceptions import ConfigEntryNotReady
 
-from .const import CONF_BASE_URL, DOMAIN, LOGGER, PLATFORMS
+from .const import (
+    CONF_BASE_URL,
+    DOMAIN,
+    LOGGER,
+    PLATFORMS,
+    SERVICE_DOWNLOAD_CUSTOM,
+    SERVICE_GET_CUSTOM_LIST,
+    SERVICE_GET_SUPPORTED_VERSIONS,
+)
 from .domain_data import DomainData
 from .entry_data import RuntimeEntryData
 from .helpers import (
-    KEY_CUSTOMS,
-    async_download_and_install,
-    async_fetch_repository_data,
+    REPO_KEY_CUSTOMS,
+    async_fetch_repository_description,
+)
+from .services import (
+    SERVICE_DOWNLOAD_CUSTOM_SCHEMA,
+    SERVICE_GET_CUSTOM_LIST_SCHEMA,
+    SERVICE_GET_SUPPORTED_VERSIONS_SCHEMA,
+    handle_service_custom_download,
+    handle_service_customs_list,
+    handle_service_supported_versions,
 )
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant, ServiceCall
 
-SERVICE_DOWNLOAD_CUSTOM = "download_custom"
-SERVICE_DOWNLOAD_LIST = "download_list"
-
-SERVICE_DOWNLOAD_CUSTOM_SCHEMA = vol.Schema(
-    {
-        vol.Required("config_entry"): cv.string,
-        vol.Required("component"): cv.string,
-        vol.Optional("version"): cv.string,
-    }
-)
-
-SERVICE_DOWNLOAD_LIST_SCHEMA = vol.Schema(
-    {vol.Required("config_entry"): cv.string},
-)
-
 
 async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
     """Register the component integration services."""
 
-    async def handle_custom_list(call: ServiceCall) -> None:
+    async def handle_customs_list(call: ServiceCall) -> ServiceResponse:
         """Download the repository customs list."""
-        config_data = hass.config_entries.async_get_entry(call.data["config_entry"])
-        if not config_data:
-            msg = "Invalid config data"
-            raise ValueError(msg)
-
-        try:
-            repo_data = await async_fetch_repository_data(
-                hass, config_data.data[CONF_BASE_URL]
-            )
-        except (ConnectionError, ValueError) as err:
-            msg = f"Error in the '{config_data.title}' data fetch"
-            raise ValueError(msg) from err
-
-        return repo_data[KEY_CUSTOMS]
-
-    async def handle_custom_download(call: ServiceCall) -> None:
-        """Manage the custom version download."""
-        custom_integration = call.data["component"]
-        custom_version = call.data.get("version", None)
-        config_data = hass.config_entries.async_get_entry(call.data["config_entry"])
-        if not config_data:
-            msg = "Invalid config data"
-            raise ValueError(msg)
-
-        try:
-            await async_download_and_install(
-                hass,
-                config_data.data[CONF_BASE_URL],
-                custom_integration,
-                custom_version,
-            )
-        except (ConnectionError, ValueError) as err:
-            raise HomeAssistantError(str(err)) from err
+        return cast("ServiceResponse", await handle_service_customs_list(hass, call))
 
     hass.services.async_register(
         DOMAIN,
-        SERVICE_DOWNLOAD_LIST,
-        handle_custom_list,
-        schema=SERVICE_DOWNLOAD_LIST_SCHEMA,
+        SERVICE_GET_CUSTOM_LIST,
+        handle_customs_list,
+        schema=SERVICE_GET_CUSTOM_LIST_SCHEMA,
         supports_response=SupportsResponse.ONLY,
     )
+
+    async def handle_supported_versions(call: ServiceCall) -> ServiceResponse:
+        """Download and return all the available versions."""
+        return cast(
+            "ServiceResponse", await handle_service_supported_versions(hass, call)
+        )
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_GET_SUPPORTED_VERSIONS,
+        handle_supported_versions,
+        schema=SERVICE_GET_SUPPORTED_VERSIONS_SCHEMA,
+        supports_response=SupportsResponse.ONLY,
+    )
+
+    async def handle_custom_download(call: ServiceCall) -> ServiceResponse:
+        """Manage the custom version download."""
+        return cast("ServiceResponse", await handle_service_custom_download(hass, call))
+
     hass.services.async_register(
         DOMAIN,
         SERVICE_DOWNLOAD_CUSTOM,
         handle_custom_download,
         schema=SERVICE_DOWNLOAD_CUSTOM_SCHEMA,
+        supports_response=SupportsResponse.ONLY,
     )
 
     return True
@@ -107,11 +93,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     LOGGER.debug("Check repository descriptions for: %s", entry.title)
 
     try:
-        repo_desc = await async_fetch_repository_data(hass, base_url)
+        repo_desc = await async_fetch_repository_description(hass, base_url)
     except (ConnectionError, ValueError) as err:
         msg = f"Error in the '{entry.title}' data fetch"
         raise ConfigEntryNotReady(msg) from err
-    entry_runtime_data.customs_list = list(repo_desc.get(KEY_CUSTOMS, {}).keys())
+    entry_runtime_data.customs_list = list(repo_desc.get(REPO_KEY_CUSTOMS, {}).keys())
 
     domain_data = DomainData.get(hass)
     domain_data.set_entry_data(entry, entry_runtime_data)
@@ -140,7 +126,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry_data.update_unlistener = None
 
     if domain_data.is_empty_entry_data:
+        hass.services.async_remove(DOMAIN, SERVICE_GET_CUSTOM_LIST)
+        hass.services.async_remove(DOMAIN, SERVICE_GET_SUPPORTED_VERSIONS)
         hass.services.async_remove(DOMAIN, SERVICE_DOWNLOAD_CUSTOM)
-        hass.services.async_remove(DOMAIN, SERVICE_DOWNLOAD_LIST)
 
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)

@@ -1,10 +1,13 @@
 {
     "services": {
+        "get_customs_list": {
+            "service": "mdi:view-list-outline"
+        },
+        "get_supported_versions": {
+            "service": "mdi:format-list-checkbox"
+        },
         "download_custom": {
             "service": "mdi:download-circle-outline"
-        },
-        "download_list": {
-            "service": "mdi:view-list-outline"
         }
     }
 }

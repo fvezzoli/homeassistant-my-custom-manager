@@ -26,10 +26,10 @@ from .const import (
     DOMAIN,
 )
 from .helpers import (
-    KEY_CUSTOMS,
-    KEY_DESCRIPTION,
-    KEY_NAME,
-    async_fetch_repository_data,
+    REPO_KEY_CUSTOMS,
+    REPO_KEY_DESCRIPTION,
+    REPO_KEY_NAME,
+    async_fetch_repository_description,
 )
 
 if TYPE_CHECKING:
@@ -73,7 +73,7 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
 
                 repo_desc = None
                 try:
-                    repo_desc = await async_fetch_repository_data(
+                    repo_desc = await async_fetch_repository_description(
                         self.hass, user_input[CONF_BASE_URL]
                     )
                 except ConnectionError:
@@ -82,7 +82,7 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
                     errors[CONF_BASE_URL] = "invalid_repository"
 
                 if repo_desc:
-                    self._repo_name = repo_desc[KEY_NAME]
+                    self._repo_name = repo_desc[REPO_KEY_NAME]
                     self._data = user_input
                     return self._show_step_welcome_form(repo_desc)
 
@@ -112,15 +112,15 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
 
     def _show_step_welcome_form(self, repo_desc: dict) -> ConfigFlowResult:
         customs_list = ""
-        for custom in repo_desc[KEY_CUSTOMS]:
-            customs_list += f"- **{custom}**: {repo_desc[KEY_CUSTOMS][custom]}\n"
+        for custom in repo_desc[REPO_KEY_CUSTOMS]:
+            customs_list += f"- **{custom}**: {repo_desc[REPO_KEY_CUSTOMS][custom]}\n"
 
         return self.async_show_form(
             step_id="welcome",
             data_schema=vol.Schema({}),
             description_placeholders={
-                "name": repo_desc[KEY_NAME],
-                "description": repo_desc[KEY_DESCRIPTION],
+                "name": repo_desc[REPO_KEY_NAME],
+                "description": repo_desc[REPO_KEY_DESCRIPTION],
                 "list": customs_list,
             },
         )

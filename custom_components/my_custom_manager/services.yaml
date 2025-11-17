@@ -1,3 +1,38 @@
+get_customs_list:
+  name: Custom component list download
+  description: Download the custom list from repository
+  fields:
+    config_entry:
+      name: Repository
+      description: Select the remote repository to use.
+      required: true
+      selector:
+        config_entry:
+          integration: my_custom_manager
+get_supported_versions:
+  name: Supported version list for the custom
+  description: Download all the supported version for the custom component from repository
+  fields:
+    config_entry:
+      name: Repository
+      description: Select the remote repository to use.
+      required: true
+      selector:
+        config_entry:
+          integration: my_custom_manager
+    component:
+      name: Remote component
+      description: The remote component.
+      example: my_custom
+      required: true
+      selector:
+        text:
+    only_stable:
+      name: Only stable versions
+      description: Filter out the unstable versions (not alpha/beta/dev/rc)
+      required: false
+      selector:
+        boolean:
 download_custom:
   name: Custom component download
   description: Download a custom componet from a remote repository.
@@ -23,14 +58,3 @@ download_custom:
       required: false
       selector:
         text:
-download_list:
-  name: Custom component list download
-  description: Download the custom list from repository
-  fields:
-    config_entry:
-      name: Repository
-      description: Select the remote repository to use.
-      required: true
-      selector:
-        config_entry:
-          integration: my_custom_manager

@@ -25,7 +25,7 @@ from .const import (
 )
 from .domain_data import DomainData
 from .helpers import (
-    KEY_CHANGELOG,
+    REPO_KEY_CHANGELOG,
     async_download_and_install,
     async_fetch_custom_description,
     async_fetch_page,
@@ -106,7 +106,7 @@ class EntityUpdateCoordinator(DataUpdateCoordinator):
             msg = "Error in data fetch"
             raise UpdateFailed(msg) from err
 
-        self._changelog_url = domain_data.get(KEY_CHANGELOG)
+        self._changelog_url = domain_data.get(REPO_KEY_CHANGELOG)
 
         return get_latest_version(domain_data, only_stable=True)
 
