@@ -171,7 +171,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry_data.update_unlistener()
     entry_data.update_unlistener = None
 
-    if domain_data.is_empty_entry_data:
+    # During reload, the entry in HA registry is STILL present
+    # → do NOT remove the service
+    all_entries = hass.config_entries.async_entries(DOMAIN)
+    if len(all_entries) == 0:
         hass.services.async_remove(DOMAIN, SERVICE_GET_CUSTOM_LIST)
         hass.services.async_remove(DOMAIN, SERVICE_GET_SUPPORTED_VERSIONS)
         hass.services.async_remove(DOMAIN, SERVICE_DOWNLOAD_CUSTOM)

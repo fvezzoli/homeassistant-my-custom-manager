@@ -21,11 +21,6 @@ class DomainData:
     actual_version: str = ""
     _entry_datas: dict[str, RuntimeEntryData] = field(default_factory=dict)
 
-    @property
-    def is_empty_entry_data(self) -> bool:
-        """Return if no more entry in the domain."""
-        return len(self._entry_datas) == 0
-
     def get_entry_data(self, entry: ConfigEntry) -> RuntimeEntryData:
         """
         Return the runtime entry data associated with this config entry.
