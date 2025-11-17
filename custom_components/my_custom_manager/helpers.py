@@ -283,9 +283,14 @@ async def async_download_and_install(
     components_path = hass.config.path(f"custom_components/{component}")
 
     def extract_data() -> None:
-        with zipfile.ZipFile(io.BytesIO(data)) as zip_data:
-            try:
-                folder_name = zip_data.namelist()[0]
+        try:
+            with zipfile.ZipFile(io.BytesIO(data)) as zip_data:
+                namelist = zip_data.namelist()
+                if not namelist:
+                    msg = "Empty zip archive"
+                    raise ValueError(msg)
+
+                folder_name = namelist[0].rstrip("/")
                 if Path(extract_path).exists():
                     shutil.rmtree(extract_path)
                 zip_data.extractall(extract_path)
@@ -295,12 +300,17 @@ async def async_download_and_install(
                 if Path(components_path).exists():
                     shutil.rmtree(components_path)
                 shutil.copytree(src_path, components_path, dirs_exist_ok=True)
-            except (FileNotFoundError, PermissionError, shutil.Error, OSError):
-                msg = "Error in file extract"
-                LOGGER.exception(msg)
-            finally:
+        except (FileNotFoundError, PermissionError, shutil.Error, OSError):
+            msg = "Error in file extract"
+            LOGGER.exception(msg)
+
+        finally:
+            # Try to remove always the temporary directory
+            try:
                 if Path(extract_path).exists():
                     shutil.rmtree(extract_path)
+            except (FileNotFoundError, PermissionError, shutil.Error, OSError):
+                LOGGER.error("Fail to remove the temporary directory")
 
     await hass.async_add_executor_job(extract_data)
 
