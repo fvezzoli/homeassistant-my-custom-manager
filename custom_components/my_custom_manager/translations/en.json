@@ -32,7 +32,8 @@
             "init": {
                 "title": "Options for {name} repository",
                 "data": {
-                    "polling_time": "Polling hours"
+                    "polling_time": "Polling hours",
+                    "show_unstable": "Use unstable versions in update (alpha, beta, rc)"
                 }
             }
         }
@@ -40,11 +41,11 @@
     "issues": {
         "restart_required": {
             "title": "Restart required",
-            "description": "The **{component}** component was successfully updated to version {installed_version}, but a Home Assistant restart is required."
+            "description": "The **{component_name}** (domain: {component}) component version {installed_version} was successfully installed, but a Home Assistant restart is required.\n\nYou can find version info at \"more information\" link."
         },
         "update_failed": {
-            "title": "{component} update failed",
-            "description": "The **{component}** component was not updated successfully.\nThe installed version is {installed_version} instead of {desidered_version}.\n\nPlease check the integration folder before proceeding with the restart.\nYou can find the integration file at the link under \"more information\"."
+            "title": "\"{component_name}\" update failed",
+            "description": "The **{component_name}** (domain: {component}) component was not updated successfully.\nThe installed version is {installed_version} instead of {desidered_version}.\n\nPlease check the integration folder (<config>/custom_components/{component}) before proceeding with the restart.\n\nYou can find the integration file at the link under \"more information\"."
         }
     }
 }

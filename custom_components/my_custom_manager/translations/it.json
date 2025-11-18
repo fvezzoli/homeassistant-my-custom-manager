@@ -32,7 +32,8 @@
             "init": {
                 "title": "Opzioni per il repository {name}",
                 "data": {
-                    "polling_time": "Ore tra i diversi aggiornamenti"
+                    "polling_time": "Ore tra i diversi aggiornamenti",
+                    "show_unstable": "Usa le versioni non stabili negli aggiornamenti (alpha, beta, rc)"
                 }
             }
         }
@@ -40,11 +41,11 @@
     "issues": {
         "restart_required": {
             "title": "Riavvio richiesto",
-            "description": "Il componente **{component}** è stato aggiornato correttamente alla versione {installed_version}, ma richiede un riavvio di Home Assistant."
+            "description": "Il componente **{component_name}** (dominio: {component}) è stato installato correttamente alla versione {installed_version}, ma richiede un riavvio di Home Assistant.\n\nPuoi trovare la versione al link \"ulteriori informazioni\"."
         },
         "update_failed": {
-            "title": "Aggiornamento {component} fallito",
-            "description": "Il componente **{component}** non si è aggiornato correttamente.\nLa versione installata risulta essere {installed_version} al posto di {desidered_version}\n\nPer favore controlla la cartella dell'integrazione prima di porcedere con il riavvio.\nIl file dell'integrazione lo trovi al link \"ulteriori informazioni\""
+            "title": "Aggiornamento {component_name} fallito",
+            "description": "Il componente *{component_name}** (dominio: {component}) non si è installato correttamente.\nLa versione installata risulta essere {installed_version} al posto di {desidered_version}\n\nPer favore controlla la cartella dell'integrazione (<config>/custom_components/{component}) prima di porcedere con il riavvio.\n\nIl file dell'integrazione lo trovi al link \"ulteriori informazioni\""
         }
     }
 }

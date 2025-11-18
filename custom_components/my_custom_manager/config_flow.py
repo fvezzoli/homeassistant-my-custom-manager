@@ -5,6 +5,7 @@ from __future__ import annotations
 from hashlib import sha1
 from typing import TYPE_CHECKING, Any
 
+import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from homeassistant.config_entries import (
     CONN_CLASS_CLOUD_POLL,
@@ -22,14 +23,16 @@ from homeassistant.helpers.selector import (
 from .const import (
     CONF_BASE_URL,
     CONF_POLL_TIME,
+    CONF_SHOW_UNSTABLE,
     DEFAULT_POLLING_HOURS,
+    DEFAULT_SHOW_UNSTABLE,
     DOMAIN,
 )
 from .helpers import (
-    KEY_CUSTOMS,
-    KEY_DESCRIPTION,
-    KEY_NAME,
-    async_fetch_repository_data,
+    REPO_KEY_CUSTOMS,
+    REPO_KEY_DESCRIPTION,
+    REPO_KEY_NAME,
+    async_fetch_repository_description,
 )
 
 if TYPE_CHECKING:
@@ -40,7 +43,7 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
     """Config flow for my custom manager."""
 
     VERSION = 1
-    MINOR_VERSION = 0
+    MINOR_VERSION = 1
     CONNECTION_CLASS = CONN_CLASS_CLOUD_POLL
 
     _repo_name: str = "My custom repository"
@@ -65,6 +68,7 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
 
             if errors == {}:
                 await self.async_set_unique_id(
+                    # sha1 is used only for unique_id generation not security
                     sha1(base_url.encode()).hexdigest(),  # noqa: S324
                     raise_on_progress=False,
                 )
@@ -72,7 +76,7 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
 
                 repo_desc = None
                 try:
-                    repo_desc = await async_fetch_repository_data(
+                    repo_desc = await async_fetch_repository_description(
                         self.hass, user_input[CONF_BASE_URL]
                     )
                 except ConnectionError:
@@ -81,7 +85,7 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
                     errors[CONF_BASE_URL] = "invalid_repository"
 
                 if repo_desc:
-                    self._repo_name = repo_desc[KEY_NAME]
+                    self._repo_name = repo_desc[REPO_KEY_NAME]
                     self._data = user_input
                     return self._show_step_welcome_form(repo_desc)
 
@@ -104,22 +108,25 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
             return self.async_create_entry(
                 title=self._repo_name,
                 data=self._data,
-                options={CONF_POLL_TIME: DEFAULT_POLLING_HOURS},
+                options={
+                    CONF_POLL_TIME: DEFAULT_POLLING_HOURS,
+                    CONF_SHOW_UNSTABLE: DEFAULT_SHOW_UNSTABLE,
+                },
             )
 
         return self._show_step_user_flow({})
 
     def _show_step_welcome_form(self, repo_desc: dict) -> ConfigFlowResult:
         customs_list = ""
-        for custom in repo_desc[KEY_CUSTOMS]:
-            customs_list += f"- **{custom}**: {repo_desc[KEY_CUSTOMS][custom]}\n"
+        for custom in repo_desc[REPO_KEY_CUSTOMS]:
+            customs_list += f"- **{custom}**: {repo_desc[REPO_KEY_CUSTOMS][custom]}\n"
 
         return self.async_show_form(
             step_id="welcome",
             data_schema=vol.Schema({}),
             description_placeholders={
-                "name": repo_desc[KEY_NAME],
-                "description": repo_desc[KEY_DESCRIPTION],
+                "name": repo_desc[REPO_KEY_NAME],
+                "description": repo_desc[REPO_KEY_DESCRIPTION],
                 "list": customs_list,
             },
         )
@@ -132,29 +139,30 @@ class OptionsFlowHandler(OptionsFlow):
         self, user_data: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Init options manage steps."""
-        actual_polling = self.config_entry.options.get(
-            CONF_POLL_TIME, DEFAULT_POLLING_HOURS
-        )
         if user_data:
-            polling_time = user_data[CONF_POLL_TIME]
-
-            if actual_polling != polling_time:
-                new_options = {CONF_POLL_TIME: polling_time}
-                self.hass.config_entries.async_update_entry(
-                    self.config_entry, options=new_options
-                )
-                return self.async_create_entry(title="", data=new_options)
+            self.hass.config_entries.async_update_entry(
+                self.config_entry, options=user_data
+            )
+            return self.async_create_entry(title="", data=user_data)
 
         data_schema = vol.Schema(
             {
                 vol.Required(
                     CONF_POLL_TIME,
-                    default=actual_polling,
+                    default=self.config_entry.options.get(
+                        CONF_POLL_TIME, DEFAULT_POLLING_HOURS
+                    ),
                 ): NumberSelector(
                     NumberSelectorConfig(
                         min=3, max=24, step=1, mode=NumberSelectorMode.BOX
                     )
                 ),
+                vol.Required(
+                    CONF_SHOW_UNSTABLE,
+                    default=self.config_entry.options.get(
+                        CONF_SHOW_UNSTABLE, DEFAULT_SHOW_UNSTABLE
+                    ),
+                ): cv.boolean,
             }
         )
 

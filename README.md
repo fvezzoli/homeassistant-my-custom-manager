@@ -35,11 +35,13 @@ The integration will automatically:
 2. Check the presence of already present custom_components managed by the remote repository
 3. Create update entities for each component
 
-You can also adjust the polling interval in the integration’s Options Flow.
+You can also adjust some behaviours in the integration’s Options Flow:
+- the polling interval in hours, from 3 to 24 hours
+- if update entity use or not the unstable versions
 
 ## 🧰 Services
 
-### my_custom_manager.download_list
+### my_custom_manager.get_customs_list
 
 Download the list of custom_component managed by the repository.
 
@@ -53,9 +55,27 @@ my_custom_manager: My Custom Component Version Manager
 another_custom: Another beautiful custom component for HomeAssistant
 ```
 
+### my_custom_manager.get_supported_versions
+
+Fetch the list of available versions for specific custom component.
+
+Fields:
+| Field         | Description                                  | Required   |
+|---------------|----------------------------------------------|------------|
+| config_entry  | Select the configured instance to use        | ✅         |
+| component     | Name of the component to download            | ✅         |
+| show_unstable | Return also ustable versions (alpha,beta,rc) | ❌ (False) |
+
+The returned data is a list of available versions:
+```yaml
+supported_versions:
+  - 2.0.0
+  - 1.0.0
+```
+
 ### my_custom_manager.download_custom
 
-Download and install a custom component from the configured base URL.
+Download and install a custom component from the configured base URL. This service installs any supported version, whether stable or unstable, regardless of the configuration of the option in the entry.
 
 Fields:
 | Field        | Description                           | Required |

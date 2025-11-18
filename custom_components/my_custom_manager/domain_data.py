@@ -18,12 +18,8 @@ if TYPE_CHECKING:
 class DomainData:
     """Define a class that stores global my custom manager data in hass.data[DOMAIN]."""
 
+    actual_version: str = ""
     _entry_datas: dict[str, RuntimeEntryData] = field(default_factory=dict)
-
-    @property
-    def is_empty_entry_data(self) -> bool:
-        """Return if no more entry in the domain."""
-        return len(self._entry_datas) == 0
 
     def get_entry_data(self, entry: ConfigEntry) -> RuntimeEntryData:
         """

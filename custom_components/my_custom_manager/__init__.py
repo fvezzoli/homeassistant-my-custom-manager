@@ -7,93 +7,125 @@ https://git.villavasco.ovh/home-assistant/my-custom-manager/
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
-import voluptuous as vol
-from homeassistant.core import SupportsResponse
+from homeassistant.core import ServiceResponse, SupportsResponse
 from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError
-from homeassistant.helpers import config_validation as cv
 
-from .const import CONF_BASE_URL, DOMAIN, LOGGER, PLATFORMS
+from .const import (
+    CONF_BASE_URL,
+    CONF_SHOW_UNSTABLE,
+    CUSTOM_MANIFEST_VERSION,
+    DEFAULT_SHOW_UNSTABLE,
+    DOMAIN,
+    LOGGER,
+    PLATFORMS,
+    SERVICE_DOWNLOAD_CUSTOM,
+    SERVICE_GET_CUSTOM_LIST,
+    SERVICE_GET_SUPPORTED_VERSIONS,
+    SERVICE_KEY_CONFIG_ENTRY,
+    SERVICE_KEY_CUSTOM_COMPONENT,
+    SERVICE_KEY_SHOW_UNSTABLE,
+    SERVICE_KEY_VERSION,
+)
 from .domain_data import DomainData
 from .entry_data import RuntimeEntryData
 from .helpers import (
-    KEY_CUSTOMS,
-    async_download_and_install,
-    async_fetch_repository_data,
+    REPO_KEY_CUSTOMS,
+    async_fetch_repository_description,
+    async_get_local_custom_manifest,
+)
+from .services import (
+    SERVICE_DOWNLOAD_CUSTOM_SCHEMA,
+    SERVICE_GET_CUSTOM_LIST_SCHEMA,
+    SERVICE_GET_SUPPORTED_VERSIONS_SCHEMA,
+    handle_service_custom_download,
+    handle_service_customs_list,
+    handle_service_supported_versions,
 )
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant, ServiceCall
 
-SERVICE_DOWNLOAD_CUSTOM = "download_custom"
-SERVICE_DOWNLOAD_LIST = "download_list"
-
-SERVICE_DOWNLOAD_CUSTOM_SCHEMA = vol.Schema(
-    {
-        vol.Required("config_entry"): cv.string,
-        vol.Required("component"): cv.string,
-        vol.Optional("version"): cv.string,
-    }
-)
-
-SERVICE_DOWNLOAD_LIST_SCHEMA = vol.Schema(
-    {vol.Required("config_entry"): cv.string},
-)
-
 
 async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
     """Register the component integration services."""
+    domain_data = DomainData.get(hass)
+    domain_data.actual_version = (
+        await async_get_local_custom_manifest(hass, DOMAIN) or {}
+    ).get(CUSTOM_MANIFEST_VERSION, "")
 
-    async def handle_custom_list(call: ServiceCall) -> None:
+    def get_entry_data_from_id(config_entry_id: str) -> ConfigEntry:
+        """Return the config entry data from id."""
+        config_data = hass.config_entries.async_get_entry(config_entry_id)
+        if not config_data:
+            msg = f"{config_entry_id} entry does not exist"
+            raise HomeAssistantError(msg)
+        return config_data
+
+    async def handle_customs_list(call: ServiceCall) -> ServiceResponse:
         """Download the repository customs list."""
-        config_data = hass.config_entries.async_get_entry(call.data["config_entry"])
-        if not config_data:
-            msg = "Invalid config data"
-            raise ValueError(msg)
-
-        try:
-            repo_data = await async_fetch_repository_data(
-                hass, config_data.data[CONF_BASE_URL]
-            )
-        except (ConnectionError, ValueError) as err:
-            msg = f"Error in the '{config_data.title}' data fetch"
-            raise ValueError(msg) from err
-
-        return repo_data[KEY_CUSTOMS]
-
-    async def handle_custom_download(call: ServiceCall) -> None:
-        """Manage the custom version download."""
-        custom_integration = call.data["component"]
-        custom_version = call.data.get("version", None)
-        config_data = hass.config_entries.async_get_entry(call.data["config_entry"])
-        if not config_data:
-            msg = "Invalid config data"
-            raise ValueError(msg)
-
-        try:
-            await async_download_and_install(
-                hass,
-                config_data.data[CONF_BASE_URL],
-                custom_integration,
-                custom_version,
-            )
-        except Exception as err:
-            raise HomeAssistantError(str(err)) from err
+        config_entry_id = call.data[SERVICE_KEY_CONFIG_ENTRY]
+        return cast(
+            "ServiceResponse",
+            await handle_service_customs_list(
+                hass, get_entry_data_from_id(config_entry_id)
+            ),
+        )
 
     hass.services.async_register(
         DOMAIN,
-        SERVICE_DOWNLOAD_LIST,
-        handle_custom_list,
-        schema=SERVICE_DOWNLOAD_LIST_SCHEMA,
+        SERVICE_GET_CUSTOM_LIST,
+        handle_customs_list,
+        schema=SERVICE_GET_CUSTOM_LIST_SCHEMA,
         supports_response=SupportsResponse.ONLY,
     )
+
+    async def handle_supported_versions(call: ServiceCall) -> ServiceResponse:
+        """Download and return all the available versions."""
+        config_entry_id = call.data[SERVICE_KEY_CONFIG_ENTRY]
+        custom_integration = call.data[SERVICE_KEY_CUSTOM_COMPONENT]
+        show_unstable = call.data.get(SERVICE_KEY_SHOW_UNSTABLE, DEFAULT_SHOW_UNSTABLE)
+        return cast(
+            "ServiceResponse",
+            await handle_service_supported_versions(
+                hass,
+                get_entry_data_from_id(config_entry_id),
+                custom_integration,
+                show_unstable=show_unstable,
+            ),
+        )
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_GET_SUPPORTED_VERSIONS,
+        handle_supported_versions,
+        schema=SERVICE_GET_SUPPORTED_VERSIONS_SCHEMA,
+        supports_response=SupportsResponse.ONLY,
+    )
+
+    async def handle_custom_download(call: ServiceCall) -> ServiceResponse:
+        """Manage the custom version download."""
+        config_entry_id = call.data[SERVICE_KEY_CONFIG_ENTRY]
+        custom_integration = call.data[SERVICE_KEY_CUSTOM_COMPONENT]
+        custom_version = call.data.get(SERVICE_KEY_VERSION, None)
+        return cast(
+            "ServiceResponse",
+            await handle_service_custom_download(
+                hass,
+                get_entry_data_from_id(config_entry_id),
+                custom_integration,
+                custom_version,
+            ),
+        )
+
     hass.services.async_register(
         DOMAIN,
         SERVICE_DOWNLOAD_CUSTOM,
         handle_custom_download,
         schema=SERVICE_DOWNLOAD_CUSTOM_SCHEMA,
+        supports_response=SupportsResponse.ONLY,
     )
 
     return True
@@ -107,11 +139,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     LOGGER.debug("Check repository descriptions for: %s", entry.title)
 
     try:
-        repo_desc = await async_fetch_repository_data(hass, base_url)
+        repo_desc = await async_fetch_repository_description(hass, base_url)
     except (ConnectionError, ValueError) as err:
         msg = f"Error in the '{entry.title}' data fetch"
         raise ConfigEntryNotReady(msg) from err
-    entry_runtime_data.customs_list = list(repo_desc.get(KEY_CUSTOMS, {}).keys())
+    entry_runtime_data.customs_list = list(repo_desc.get(REPO_KEY_CUSTOMS, {}).keys())
 
     domain_data = DomainData.get(hass)
     domain_data.set_entry_data(entry, entry_runtime_data)
@@ -139,8 +171,55 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry_data.update_unlistener()
     entry_data.update_unlistener = None
 
-    if domain_data.is_empty_entry_data:
+    # During reload, the entry in HA registry is STILL present
+    # → do NOT remove the service
+    all_entries = hass.config_entries.async_entries(DOMAIN)
+    if len(all_entries) == 0:
+        hass.services.async_remove(DOMAIN, SERVICE_GET_CUSTOM_LIST)
+        hass.services.async_remove(DOMAIN, SERVICE_GET_SUPPORTED_VERSIONS)
         hass.services.async_remove(DOMAIN, SERVICE_DOWNLOAD_CUSTOM)
-        hass.services.async_remove(DOMAIN, SERVICE_DOWNLOAD_LIST)
 
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+
+async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+    """Migrate entry."""
+    migrated = False
+    version = config_entry.version
+    minor_version = config_entry.minor_version
+
+    data = {**config_entry.data}
+    options = {**config_entry.options}
+
+    if version > 1:
+        LOGGER.error("Unknown version %s. You try to downgrade?", version)
+        return False
+
+    if version == 1:
+        if minor_version > 1:
+            LOGGER.error(
+                "Unknown version %s.%s. You try to downgrade?", version, minor_version
+            )
+            return False
+
+        if minor_version == 0:
+            migrated = True
+            LOGGER.debug("Add show unstable to the entry option (1.1)")
+            options[CONF_SHOW_UNSTABLE] = DEFAULT_SHOW_UNSTABLE
+            minor_version = 1
+
+    if migrated:
+        hass.config_entries.async_update_entry(
+            config_entry,
+            data=data,
+            options=options,
+            version=version,
+            minor_version=minor_version,
+        )
+        LOGGER.debug(
+            "Config entry migrated successful to version %s.%s",
+            version,
+            minor_version,
+        )
+
+    return True
