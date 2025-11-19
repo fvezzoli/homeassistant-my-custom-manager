@@ -246,7 +246,8 @@ async def async_download_and_install(
 
     # Extract data in memory and substitute files in the destination directory
     extract_path = hass.config.path(f"custom_components/_tmp_{component}")
-    components_path = hass.config.path(f"custom_components/{component}")
+    custom_directory = f"custom_components/{component}"
+    components_path = hass.config.path(custom_directory)
 
     def extract_data() -> None:
         try:
@@ -256,13 +257,16 @@ async def async_download_and_install(
                     msg = "Empty zip archive"
                     raise ValueError(msg)
 
-                folder_name = namelist[0].rstrip("/")
+                if not any(name.rstrip("/") == custom_directory for name in namelist):
+                    msg = "Invalid ZIP structure"
+                    raise ValueError(msg)
+
                 if Path(extract_path).exists():
                     shutil.rmtree(extract_path)
                 zip_data.extractall(extract_path)
-                src_path = Path(extract_path) / folder_name
 
                 # Overwrite local files
+                src_path = Path(extract_path) / custom_directory
                 if Path(components_path).exists():
                     shutil.rmtree(components_path)
                 shutil.copytree(src_path, components_path, dirs_exist_ok=True)
