@@ -27,6 +27,7 @@ from .const import (
     DOMAIN,
     LOGGER,
     SERVICE_KEY_INSTALLED_VERSION,
+    SERVICE_KEY_VERSION,
 )
 from .domain_data import DomainData
 from .helpers import (
@@ -105,7 +106,7 @@ class EntityUpdateCoordinator(DataUpdateCoordinator):
             ),
         )
 
-    async def _async_update_data(self) -> str:
+    async def _async_update_data(self) -> dict[str, Any]:
         try:
             custom_repo_data = await async_fetch_custom_description(
                 self.hass, self._entry.data[CONF_BASE_URL], self._custom_integration
@@ -123,7 +124,9 @@ class EntityUpdateCoordinator(DataUpdateCoordinator):
                 CONF_SHOW_UNSTABLE, DEFAULT_SHOW_UNSTABLE
             ),
         )
-        return str(max(supported_versions))
+        return {
+            SERVICE_KEY_VERSION: str(max(supported_versions)),
+        }
 
     @property
     def changelog_url(self) -> None | str:
@@ -187,9 +190,9 @@ class ComponentUpdateEntity(CoordinatorEntity, UpdateEntity):
         return None
 
     @property
-    def latest_version(self) -> dict[str, Any]:
+    def latest_version(self) -> str:
         """Latest available version."""
-        return self.coordinator.data
+        return self.coordinator.data[SERVICE_KEY_VERSION]
 
     async def async_install(
         self,
