@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Self, cast
 
@@ -19,6 +20,7 @@ class DomainData:
     """Define a class that stores global my custom manager data in hass.data[DOMAIN]."""
 
     actual_version: str = ""
+    installer_lock: None | asyncio.Lock = None
     _entry_datas: dict[str, RuntimeEntryData] = field(default_factory=dict)
 
     def get_entry_data(self, entry: ConfigEntry) -> RuntimeEntryData:

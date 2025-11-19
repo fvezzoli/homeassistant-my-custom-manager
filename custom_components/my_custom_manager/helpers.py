@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import io
 import json
 import shutil
@@ -38,6 +39,7 @@ from .const import (
     REPO_KEY_VERSIONS,
     REPO_REQUEST_TIMEOUT,
 )
+from .domain_data import DomainData
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -276,7 +278,11 @@ async def async_download_and_install(
             except (FileNotFoundError, PermissionError, shutil.Error, OSError):
                 LOGGER.error("Fail to remove the temporary directory")
 
-    await hass.async_add_executor_job(extract_data)
+    domain_data = DomainData.get(hass)
+    if domain_data.installer_lock is None:
+        domain_data.installer_lock = asyncio.Lock()
+    async with domain_data.installer_lock:
+        await hass.async_add_executor_job(extract_data)
 
 
 async def check_version_installed(
