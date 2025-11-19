@@ -221,9 +221,10 @@ class ComponentUpdateEntity(CoordinatorEntity, UpdateEntity):
                 )
             ).get(SERVICE_KEY_INSTALLED_VERSION, None)
         finally:
-            self._attr_installed_version = (
-                str(returned_version) if returned_version else None
-            )
+            if returned_version:
+                self._attr_installed_version = str(returned_version)
+            else:
+                self._attr_available = False
 
             self._attr_in_progress = False
             self.async_write_ha_state()
