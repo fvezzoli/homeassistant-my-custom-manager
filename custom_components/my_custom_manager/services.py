@@ -89,7 +89,7 @@ async def handle_service_supported_versions(
             hass, config_data.data[CONF_BASE_URL], custom_integration
         )
     except (ConnectionError, ValueError) as err:
-        msg = "Error in {custom_integration} data fetch"
+        msg = f"Error in {custom_integration} data fetch"
         raise HomeAssistantError(msg) from err
 
     return {
@@ -112,7 +112,7 @@ async def handle_service_custom_download(
             hass, config_data.data[CONF_BASE_URL], custom_integration
         )
     except (ConnectionError, ValueError) as err:
-        msg = "Error in {custom_integration} data fetch"
+        msg = f"Error in {custom_integration} data fetch"
         raise HomeAssistantError(msg) from err
 
     available_versions = get_supported_versions(custom_data, show_unstable=False)
