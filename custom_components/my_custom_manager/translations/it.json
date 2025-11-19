@@ -45,7 +45,7 @@
         },
         "update_failed": {
             "title": "Aggiornamento {component_name} fallito",
-            "description": "Il componente *{component_name}** (dominio: {component}) non si è installato correttamente.\nLa versione installata risulta essere {installed_version} al posto di {desidered_version}\n\nPer favore controlla la cartella dell'integrazione (<config>/custom_components/{component}) prima di porcedere con il riavvio.\n\nIl file dell'integrazione lo trovi al link \"ulteriori informazioni\""
+            "description": "Il componente *{component_name}** (dominio: {component}) non si è installato correttamente.\nLa versione installata risulta essere {installed_version} al posto di {desired_version}\n\nPer favore controlla la cartella dell'integrazione (<config>/custom_components/{component}) prima di porcedere con il riavvio.\n\nIl file dell'integrazione lo trovi al link \"ulteriori informazioni\""
         }
     }
 }

@@ -300,7 +300,7 @@ async def check_version_installed(
     translation_placeholders = {
         "component_name": component_name,
         "component": component,
-        "desidered_version": version,
+        "desired_version": version,
         "installed_version": installed_version or "[Not retrived]",
     }
 
