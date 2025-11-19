@@ -45,7 +45,7 @@ if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
 
 
-def awesome_version_validator(value: str) -> str:
+def awesome_version_validator(value: str) -> AwesomeVersion:
     """Valida che la stringa sia una versione valida AwesomeVersion."""
     try:
         value = AwesomeVersion(value)
