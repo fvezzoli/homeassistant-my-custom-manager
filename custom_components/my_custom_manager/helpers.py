@@ -308,7 +308,7 @@ async def check_version_installed(
         "installed_version": installed_version or "[Not retrived]",
     }
 
-    if installed_version == version:
+    if installed_version is not None and installed_version == version:
         LOGGER.info("Installation of %s@%s completed.", component, version)
         async_create_issue(
             hass,
