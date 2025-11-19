@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import io
 import json
 import shutil
@@ -38,12 +39,13 @@ from .const import (
     REPO_KEY_VERSIONS,
     REPO_REQUEST_TIMEOUT,
 )
+from .domain_data import DomainData
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
 
 
-def awesome_version_validator(value: str) -> str:
+def awesome_version_validator(value: str) -> AwesomeVersion:
     """Valida che la stringa sia una versione valida AwesomeVersion."""
     try:
         value = AwesomeVersion(value)
@@ -244,7 +246,8 @@ async def async_download_and_install(
 
     # Extract data in memory and substitute files in the destination directory
     extract_path = hass.config.path(f"custom_components/_tmp_{component}")
-    components_path = hass.config.path(f"custom_components/{component}")
+    custom_directory = f"custom_components/{component}"
+    components_path = hass.config.path(custom_directory)
 
     def extract_data() -> None:
         try:
@@ -254,13 +257,16 @@ async def async_download_and_install(
                     msg = "Empty zip archive"
                     raise ValueError(msg)
 
-                folder_name = namelist[0].rstrip("/")
+                if not any(name.rstrip("/") == custom_directory for name in namelist):
+                    msg = "Invalid ZIP structure"
+                    raise ValueError(msg)
+
                 if Path(extract_path).exists():
                     shutil.rmtree(extract_path)
                 zip_data.extractall(extract_path)
-                src_path = Path(extract_path) / folder_name
 
                 # Overwrite local files
+                src_path = Path(extract_path) / custom_directory
                 if Path(components_path).exists():
                     shutil.rmtree(components_path)
                 shutil.copytree(src_path, components_path, dirs_exist_ok=True)
@@ -276,7 +282,11 @@ async def async_download_and_install(
             except (FileNotFoundError, PermissionError, shutil.Error, OSError):
                 LOGGER.error("Fail to remove the temporary directory")
 
-    await hass.async_add_executor_job(extract_data)
+    domain_data = DomainData.get(hass)
+    if domain_data.installer_lock is None:
+        domain_data.installer_lock = asyncio.Lock()
+    async with domain_data.installer_lock:
+        await hass.async_add_executor_job(extract_data)
 
 
 async def check_version_installed(
@@ -294,11 +304,11 @@ async def check_version_installed(
     translation_placeholders = {
         "component_name": component_name,
         "component": component,
-        "desidered_version": version,
+        "desired_version": version,
         "installed_version": installed_version or "[Not retrived]",
     }
 
-    if installed_version == version:
+    if installed_version is not None and installed_version == version:
         LOGGER.info("Installation of %s@%s completed.", component, version)
         async_create_issue(
             hass,
