@@ -2,50 +2,61 @@
     "config": {
         "step": {
             "user": {
-                "description": "Insert the base URL for your custom components (eg. https://custom.example.com/repo)",
+                "description": "Enter the base URL of your custom component repository (e.g. https://custom.example.com/repo)",
                 "data": {
-                    "base_url": "Repository base URL"
+                    "base_url": "Repository URL"
                 }
             },
             "welcome": {
                 "title": "Repository \"{name}\"",
-                "description": "Creation confirm for repository \"**{name}**\" with description\n```{description}```\n\nWith this customs:\n{list}"
+                "description": "Do you confirm the creation of the repository \"**{name}**\", with description\n```{description}```\n\nWith these custom components:\n{list}"
             }
         },
         "error": {
-            "invalid_repository": "The repository does not have valid data",
-            "invalid_url": "The passed URL is invalid"
+            "invalid_repository": "The repository does not contain valid data",
+            "invalid_url": "The provided URL is not valid"
         },
         "abort": {
-            "already_configured": "This repository is already configured"
+            "already_configured": "This repository has already been configured"
         }
     },
     "entity": {
         "update": {
             "component_update": {
-                "name": "Component upgrade"
+                "name": "Component update"
             }
         }
     },
     "options": {
         "step": {
             "init": {
-                "title": "Options for {name} repository",
+                "title": "Options for repository {name}",
                 "data": {
-                    "polling_time": "Polling hours",
-                    "show_unstable": "Use unstable versions in update (alpha, beta, rc)"
+                    "polling_time": "Hours between updates",
+                    "show_unstable": "Use unstable versions in updates (alpha, beta, rc)"
                 }
             }
         }
     },
     "issues": {
-        "restart_required": {
-            "title": "Restart required",
-            "description": "The **{component_name}** (domain: {component}) component version {installed_version} was successfully installed, but a Home Assistant restart is required.\n\nYou can find version info at \"more information\" link."
-        },
-        "update_failed": {
-            "title": "\"{component_name}\" update failed",
-            "description": "The **{component_name}** (domain: {component}) component was not updated successfully.\nThe installed version is {installed_version} instead of {desired_version}.\n\nPlease check the integration folder (<config>/custom_components/{component}) before proceeding with the restart.\n\nYou can find the integration file at the link under \"more information\"."
+        "custom_install_end": {
+            "title": "\"{component_name}\" install {issue_type}",
+            "fix_flow": {
+                "step": {
+                    "confirm_restart": {
+                        "title": "Restart required",
+                        "description": "The component **{component_name}** (domain: {component}) was successfully installed to version {installed_version}, but requires a Home Assistant restart. Press \"Submit\" to restart."
+                    },
+                    "retry": {
+                        "title": "{component_name} update failed",
+                        "description": "The component **{component_name}** (domain: {component}) was not installed correctly (installed version \"{installed_version}\" instead of \"{desired_version}\")\n\nYou can retry by pressing the \"Submit\" button.\n\nYou can find the release files here: {release}"
+                    }
+                },
+                "abort": {
+                    "invalid_config_entry": "The configuration appears to be invalid.\n\nUnable to install {component}@{desired_version} for configuration {config_id}",
+                    "install_error": "There were problems retrying the installation.\n\nManually check the component folder (config/custom_components/{component}) before proceeding with the restart.\n\nYou can find the release files here: {release}"
+                }
+            }
         }
     }
 }
