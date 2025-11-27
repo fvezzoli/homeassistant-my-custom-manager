@@ -18,10 +18,6 @@ from aiohttp.client_exceptions import ClientError
 from awesomeversion import AwesomeVersion, AwesomeVersionException
 from homeassistant.const import __version__ as ha_version
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.issue_registry import (
-    IssueSeverity,
-    async_create_issue,
-)
 
 from .const import (
     CUSTOM_MANIFEST_VERSION,
@@ -292,45 +288,8 @@ async def async_download_and_install(
 async def check_version_installed(
     hass: HomeAssistant,
     component: str,
-    component_name: str,
-    version: AwesomeVersion,
-    learn_more_url: None | str,
 ) -> None | AwesomeVersion:
     """Check the installed version and raise repair."""
     component_manifest = await async_get_local_custom_manifest(hass, component) or {}
     manifest_version = component_manifest.get(CUSTOM_MANIFEST_VERSION)
-    installed_version = AwesomeVersion(manifest_version) if manifest_version else None
-
-    translation_placeholders = {
-        "component_name": component_name,
-        "component": component,
-        "desired_version": version,
-        "installed_version": installed_version or "[Not retrived]",
-    }
-
-    if installed_version is not None and installed_version == version:
-        LOGGER.info("Installation of %s@%s completed.", component, version)
-        async_create_issue(
-            hass,
-            component,
-            "restart_required",
-            is_fixable=False,
-            severity=IssueSeverity.WARNING,
-            translation_key="restart_required",
-            learn_more_url=learn_more_url,
-            translation_placeholders=translation_placeholders,
-        )
-    else:
-        LOGGER.error("Installation of %s@%s failed.", component, version)
-        async_create_issue(
-            hass,
-            component,
-            "update_failed",
-            is_fixable=False,
-            severity=IssueSeverity.ERROR,
-            translation_key="update_failed",
-            learn_more_url=learn_more_url,
-            translation_placeholders=translation_placeholders,
-        )
-
-    return installed_version
+    return AwesomeVersion(manifest_version) if manifest_version else None

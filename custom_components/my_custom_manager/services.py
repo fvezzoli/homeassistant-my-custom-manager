@@ -8,12 +8,16 @@ import voluptuous as vol
 from awesomeversion import AwesomeVersion
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.issue_registry import (
+    IssueSeverity,
+    async_create_issue,
+)
 
 from .const import (
     CONF_BASE_URL,
-    REPO_KEY_HOMEPAGE,
+    DOMAIN,
+    LOGGER,
     REPO_KEY_NAME,
-    REPO_KEY_RELEASE_FILE,
     SERVICE_KEY_CONFIG_ENTRY,
     SERVICE_KEY_CUSTOM_COMPONENT,
     SERVICE_KEY_INSTALLED_VERSION,
@@ -21,6 +25,7 @@ from .const import (
     SERVICE_KEY_SUPPORTED_VERSIONS,
     SERVICE_KEY_VERSION,
 )
+from .domain_data import DomainData
 from .helpers import (
     REPO_KEY_CUSTOMS,
     REPO_KEY_VERSIONS,
@@ -105,6 +110,8 @@ async def handle_service_custom_download(
     config_data: ConfigEntry,
     custom_integration: str,
     custom_version: None | str,
+    *,
+    generate_issue: bool = True,
 ) -> dict[str, None | AwesomeVersion]:
     """Manage the custom version download."""
     try:
@@ -135,15 +142,43 @@ async def handle_service_custom_download(
     except (ConnectionError, ValueError) as err:
         raise HomeAssistantError(str(err)) from err
 
-    learn_more_url: None | str = version_desc.get(
-        REPO_KEY_HOMEPAGE
-    ) or version_desc.get(REPO_KEY_RELEASE_FILE)
-    intalled_version = await check_version_installed(
+    installed_version = await check_version_installed(
         hass,
         custom_integration,
-        custom_data[REPO_KEY_NAME],
-        version,
-        learn_more_url,
     )
 
-    return {SERVICE_KEY_INSTALLED_VERSION: intalled_version}
+    domain_data = DomainData.get(hass)
+    domain_data.repairs[custom_integration] = {
+        "component": custom_integration,
+        "component_desc": custom_data[REPO_KEY_NAME],
+        "desired_version": version,
+        "installed_version": installed_version or "[Not retrived]",
+        "config_id": config_data.entry_id,
+        "version_desc": version_desc,
+    }
+
+    issue_type = "failed"
+    issue_severity = IssueSeverity.ERROR
+    if installed_version is not None and installed_version == version:
+        LOGGER.info("Installation of %s@%s completed.", custom_integration, version)
+        issue_type = "done"
+        issue_severity = IssueSeverity.WARNING
+    else:
+        LOGGER.error("Installation of %s@%s failed.", custom_integration, version)
+
+    if generate_issue:
+        async_create_issue(
+            hass=hass,
+            domain=DOMAIN,
+            issue_id=f"install_{issue_type}_{custom_integration}",
+            is_fixable=True,
+            issue_domain=DOMAIN,
+            severity=issue_severity,
+            translation_key="custom_install_end",
+            translation_placeholders={
+                "component_name": custom_data[REPO_KEY_NAME],
+                "issue_type": issue_type,
+            },
+        )
+
+    return {SERVICE_KEY_INSTALLED_VERSION: installed_version}

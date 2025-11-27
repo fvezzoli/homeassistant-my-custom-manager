@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-import asyncio
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Self, cast
+from typing import TYPE_CHECKING, Any, Self, cast
 
 from .const import DOMAIN
 
 if TYPE_CHECKING:
+    import asyncio
+
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
 
@@ -21,6 +22,7 @@ class DomainData:
 
     actual_version: str = ""
     installer_lock: None | asyncio.Lock = None
+    repairs: dict[str, dict[str, Any]] = field(default_factory=dict)
     _entry_datas: dict[str, RuntimeEntryData] = field(default_factory=dict)
 
     def get_entry_data(self, entry: ConfigEntry) -> RuntimeEntryData:
