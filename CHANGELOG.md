@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.2.0] - 2025-11-26
+
+- ✨ Add fix flows for install issues
+
 ## [2.1.1] - 2025-11-19
 
 - ✨ Check zip format
@@ -47,7 +51,8 @@ This is the legend of the icons:
 - Documentation: 📝
 - Refactoring: 🧠
 
-[Unreleased]: https://git.villavasco.ovh/home-assistant/my-custom-manager/compare/2.1.1...main
+[Unreleased]: https://git.villavasco.ovh/home-assistant/my-custom-manager/compare/2.2.0...main
+[2.2.0]: https://git.villavasco.ovh/home-assistant/my-custom-manager/compare/2.1.1...2.2.0
 [2.1.1]: https://git.villavasco.ovh/home-assistant/my-custom-manager/compare/2.1.0...2.1.1
 [2.1.0]: https://git.villavasco.ovh/home-assistant/my-custom-manager/compare/2.0.0...2.1.0
 [2.0.0]: https://git.villavasco.ovh/home-assistant/my-custom-manager/compare/1.0.0...2.0.0
