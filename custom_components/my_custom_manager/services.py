@@ -15,6 +15,8 @@ from homeassistant.helpers.issue_registry import (
 
 from .const import (
     CONF_BASE_URL,
+    CONF_SHOW_UNSTABLE,
+    DEFAULT_SHOW_UNSTABLE,
     DOMAIN,
     LOGGER,
     REPO_KEY_NAME,
@@ -122,7 +124,17 @@ async def handle_service_custom_download(
         msg = f"Error in {custom_integration} data fetch"
         raise HomeAssistantError(msg) from err
 
-    available_versions = get_supported_versions(custom_data, show_unstable=False)
+    show_unstable = config_data.options.get(CONF_SHOW_UNSTABLE, DEFAULT_SHOW_UNSTABLE)
+    if custom_version is not None:
+        show_unstable = True
+    available_versions = get_supported_versions(
+        custom_data,
+        show_unstable=show_unstable,
+    )
+    if len(available_versions) == 0:
+        msg = f"No available version present for {custom_integration}"
+        raise HomeAssistantError(msg)
+
     try:
         latest_version = max(available_versions)
     except ValueError:

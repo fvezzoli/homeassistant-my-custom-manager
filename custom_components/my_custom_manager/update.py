@@ -124,8 +124,11 @@ class EntityUpdateCoordinator(DataUpdateCoordinator):
                 CONF_SHOW_UNSTABLE, DEFAULT_SHOW_UNSTABLE
             ),
         )
+        latest_version = None
+        if len(supported_versions) != 0:
+            latest_version = str(max(supported_versions))
         return {
-            SERVICE_KEY_VERSION: str(max(supported_versions)),
+            SERVICE_KEY_VERSION: latest_version,
         }
 
     @property
