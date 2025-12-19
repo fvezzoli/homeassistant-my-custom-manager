@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+- 🐞 Permit beta download versions
+
 ## [2.2.0] - 2025-11-26
 
 - ✨ Add fix flows for install issues
