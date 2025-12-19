@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 - 🐞 Permit beta download versions
+- 🐞 Put custom update entity in unavailable if no supported version in repo
 
 ## [2.2.0] - 2025-11-26
 
