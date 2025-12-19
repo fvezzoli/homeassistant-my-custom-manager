@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.3.0] - 2025-12-19
+
 - 🐞 Permit beta download versions
 - 🐞 Put custom update entity in unavailable if no supported version in repo
 
@@ -54,7 +56,8 @@ This is the legend of the icons:
 - Documentation: 📝
 - Refactoring: 🧠
 
-[Unreleased]: https://git.villavasco.ovh/home-assistant/my-custom-manager/compare/2.2.0...main
+[Unreleased]: https://git.villavasco.ovh/home-assistant/my-custom-manager/compare/2.3.0...main
+[2.3.0]: https://git.villavasco.ovh/home-assistant/my-custom-manager/compare/2.2.0...2.3.0
 [2.2.0]: https://git.villavasco.ovh/home-assistant/my-custom-manager/compare/2.1.1...2.2.0
 [2.1.1]: https://git.villavasco.ovh/home-assistant/my-custom-manager/compare/2.1.0...2.1.1
 [2.1.0]: https://git.villavasco.ovh/home-assistant/my-custom-manager/compare/2.0.0...2.1.0
